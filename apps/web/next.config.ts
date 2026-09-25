@@ -1,4 +1,8 @@
 import type { NextConfig } from "next";
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+
+// Lets `next dev` use Cloudflare bindings (none defined yet) instead of only affecting `pnpm deploy`.
+initOpenNextCloudflareForDev();
 
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },

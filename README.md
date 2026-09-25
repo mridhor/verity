@@ -38,6 +38,24 @@ Full local stack (`supabase start`) needs Docker. Then create accounts with
 `scripts/invite_user.py` against the local API and attach them to a tenant from the
 Pengguna page as a Super Admin.
 
+## Environment variables
+
+Every place that reads one has a `.env.example` next to it — copy it, don't invent values:
+
+| File | Used by | Notes |
+| --- | --- | --- |
+| [`apps/web/.env.example`](apps/web/.env.example) | Next.js app | `NEXT_PUBLIC_*`, safe for the browser; RLS is the real access control |
+| [`apps/engine/.env.example`](apps/engine/.env.example) | FastAPI engine | No secret key — the engine only ever holds the caller's own JWT |
+| [`scripts/.env.example`](scripts/.env.example) | `scripts/invite_user.py` | Holds the Supabase secret key — bastion-only, never on a laptop or in CI |
+| [`supabase/tests/.env.example`](supabase/tests/.env.example) | `pnpm db:test` | Optional; only needed to point tests at an already-running Postgres |
+| [`infra/selfhost/.env.example`](infra/selfhost/.env.example) | Self-hosted Supabase (production, Jakarta) | Merge into the upstream Compose stack's `.env` |
+
+**Cloudflare Workers Builds** (`apps/web/wrangler.jsonc`, demo/prototype deploy only — see
+that file's header comment on scope) takes the same two `apps/web/.env.example` values, but
+as dashboard **Build variables and secrets** (Worker → Settings → Build), not as a file or as
+Cloudflare's runtime vars/secrets — Next.js inlines `NEXT_PUBLIC_*` at build time, so a
+runtime-only variable would never reach the browser bundle.
+
 ## Rules that code must not break
 The ten non-negotiable rules and where each is enforced are in PLAN.md §10.1. In short: the
 agent never writes to the system of record, identity comes only from verified JWT claims,

@@ -1,0 +1,5 @@
+
+# Cloudflare / OpenNext build output and local dev vars
+.open-next/
+.wrangler/
+.dev.vars

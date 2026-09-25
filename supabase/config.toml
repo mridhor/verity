@@ -28,7 +28,6 @@ additional_redirect_urls = ["http://localhost:3000"]
 jwt_expiry = 3600
 enable_signup = false
 # Asymmetric ES256 keys: generate once with `supabase gen signing-key --algorithm ES256`.
-signing_keys_path = "./signing_keys.json"
 
 [auth.email]
 enable_signup = false

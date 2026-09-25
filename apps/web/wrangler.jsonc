@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Demo/prototype deployment (synthetic data only, PLAN.md decision this session).
+  // Production for real client data stays Indonesia-hosted per PLAN.md §4/§10 — do not
+  // point this at a project holding real client data.
+  //
+  // NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY are NOT set here as
+  // `vars` — Next.js inlines them at build time, so they must be set as Workers Builds
+  // "Build variables and secrets" (dashboard: this Worker → Settings → Build), not as
+  // Cloudflare runtime vars/secrets. See apps/web/.env.example for what each value is.
+  "name": "verity-demo",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-09-25",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": { "enabled": true }
+}
