@@ -28,5 +28,5 @@ export async function setNewPassword(_: NewPasswordState, form: FormData): Promi
 
   // Anyone still signed in elsewhere with the old password is logged out.
   await supabase.auth.signOut({ scope: "others" });
-  redirect("/berkas");
+  redirect("/beranda");
 }

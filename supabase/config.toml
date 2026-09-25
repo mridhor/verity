@@ -23,7 +23,7 @@ port = 54323
 
 [auth]
 enabled = true
-site_url = "https://verity-mridhors-projects.vercel.app"
+site_url = "https://verity-mridhors-projects.vercel.app/"
 additional_redirect_urls = [
   "http://localhost:3000",
   "http://localhost:3000/**",
@@ -39,7 +39,9 @@ minimum_password_length = 10
 # Asymmetric ES256 keys: generate once with `supabase gen signing-key --algorithm ES256`.
 
 [auth.email]
-enable_signup = false
+# Despite the name, this switches the whole email provider (including password LOGIN) on/off.
+# It must stay true. New self-signups are blocked by `enable_signup = false` under [auth].
+enable_signup = true
 
 # Token-hash email templates (links work on any device; invites land on /masuk/sandi-baru).
 # Supabase refuses template changes on the free tier while the built-in email sender is used,

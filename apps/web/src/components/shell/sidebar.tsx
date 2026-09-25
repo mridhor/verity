@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { FolderOpen, ScrollText, Users } from "lucide-react";
+import {
+  BookMarked, BookOpen, CalendarDays, FileText, FolderArchive, FolderOpen, Home, Library, ScrollText,
+  ShieldCheck, Users, ArrowLeftRight,
+} from "lucide-react";
 import { Dot } from "@/components/ui/input";
 import { ROLE_LABEL, type AppRole } from "@/lib/roles";
 import { NavLink } from "./nav-link";
@@ -7,32 +10,61 @@ import { TenantSwitcher } from "./tenant-switcher";
 
 type Props = {
   me: { role: AppRole; tenantId: string; name: string };
+  tenantKind: string;
   berkas: { id: string; title: string }[];
   tenants: { id: string; name: string }[];
 };
 
-export function Sidebar({ me, berkas, tenants }: Props) {
-  const initials = me.name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase())
-    .join("");
+function Group({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="mt-4">
+      <div className="px-[18px] pb-1 text-[11px] uppercase tracking-[0.06em] text-subtle">{label}</div>
+      {children}
+    </div>
+  );
+}
+
+export function Sidebar({ me, tenantKind, berkas, tenants }: Props) {
+  const initials = me.name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("");
   const isAdmin = me.role === "super_admin";
+  const content = !isAdmin; // the Super Admin never sees client content (PLAN.md C-17)
+  const notaryOffice = tenantKind === "kantor_notaris";
   const canSeeAudit = isAdmin || me.role === "notaris";
 
   return (
     <nav aria-label="Navigasi utama" className="flex w-[248px] shrink-0 flex-col overflow-y-auto border-r border-border bg-background">
-      <Link href="/berkas" className="px-[18px] pt-[18px] pb-4 font-serif text-[19px] font-semibold">
+      <Link href="/beranda" className="px-[18px] pt-[18px] pb-2 font-serif text-[19px] font-semibold">
         Verity
       </Link>
 
-      <NavLink href="/berkas" icon={<FolderOpen size={15} />}>Berkas</NavLink>
-      {canSeeAudit && <NavLink href="/admin/audit" icon={<ScrollText size={15} />}>Audit log</NavLink>}
-      {isAdmin && <NavLink href="/admin/pengguna" icon={<Users size={15} />}>Pengguna</NavLink>}
+      <Group label="Kerja">
+        <NavLink href="/beranda" icon={<Home size={15} />}>Beranda</NavLink>
+        <NavLink href="/berkas" icon={<FolderOpen size={15} />}>Berkas</NavLink>
+        {content && <NavLink href="/akta" icon={<FileText size={15} />}>Akta</NavLink>}
+        {content && <NavLink href="/jadwal" icon={<CalendarDays size={15} />}>Jadwal</NavLink>}
+        {content && <NavLink href="/dokumen" icon={<FolderArchive size={15} />}>Minuta & dokumen</NavLink>}
+      </Group>
+
+      {content && notaryOffice && (
+        <Group label="Register">
+          <NavLink href="/register/repertorium" icon={<BookMarked size={15} />}>Repertorium</NavLink>
+          <NavLink href="/register/klapper" icon={<BookOpen size={15} />}>Buku klapper</NavLink>
+          <NavLink href="/protokol" icon={<ArrowLeftRight size={15} />}>Protokol notaris</NavLink>
+        </Group>
+      )}
+
+      <Group label="Referensi">
+        <NavLink href="/dasar-hukum" icon={<Library size={15} />}>Dasar hukum</NavLink>
+      </Group>
+
+      <Group label="Administrasi">
+        {isAdmin && <NavLink href="/admin/pengguna" icon={<Users size={15} />}>Pengguna</NavLink>}
+        {canSeeAudit && <NavLink href="/admin/audit" icon={<ScrollText size={15} />}>Audit log</NavLink>}
+        <NavLink href="/keamanan" icon={<ShieldCheck size={15} />}>Keamanan</NavLink>
+      </Group>
 
       {berkas.length > 0 && (
-        <>
-          <div className="px-[18px] pt-[22px] pb-2 text-xs text-subtle">Berkas aktif</div>
+        <Group label="Berkas aktif">
           {berkas.map((b) => (
             <Link
               key={b.id}
@@ -43,7 +75,7 @@ export function Sidebar({ me, berkas, tenants }: Props) {
               <span className="truncate">{b.title}</span>
             </Link>
           ))}
-        </>
+        </Group>
       )}
 
       <div className="mt-auto border-t border-border px-4 py-3">
@@ -60,9 +92,6 @@ export function Sidebar({ me, berkas, tenants }: Props) {
             <button className="text-[11.5px] text-subtle hover:text-foreground">Keluar</button>
           </form>
         </div>
-        <Link href="/masuk/sandi-baru" className="mt-2 block text-[11.5px] text-subtle hover:text-foreground">
-          Ubah kata sandi
-        </Link>
       </div>
     </nav>
   );

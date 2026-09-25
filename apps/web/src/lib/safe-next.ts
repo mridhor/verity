@@ -2,7 +2,7 @@
  * Only same-origin relative paths may be used as a post-login/post-reset destination,
  * so a crafted `?next=` cannot bounce a user to another site (open redirect).
  */
-export function safeNext(value: string | null | undefined, fallback = "/berkas"): string {
+export function safeNext(value: string | null | undefined, fallback = "/beranda"): string {
   if (!value || typeof value !== "string") return fallback;
   if (!value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) return fallback;
   try {

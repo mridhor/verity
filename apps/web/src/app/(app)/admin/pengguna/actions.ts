@@ -47,3 +47,27 @@ export async function setRole(form: FormData): Promise<void> {
   if (error) throw new Error("Perubahan peran ditolak.");
   revalidatePath("/admin/pengguna");
 }
+
+const officialSchema = z.object({
+  userId: z.uuid({ message: "Pilih Notaris." }),
+  appointment: z.enum(["notaris", "ppat"]),
+  displayName: z.string().trim().min(3, "Isi nama lengkap dengan gelar.").max(200),
+  kedudukan: z.string().trim().max(200).optional(),
+  skRef: z.string().trim().max(120).optional(),
+});
+
+export async function upsertOfficial(_: FormState, form: FormData): Promise<FormState> {
+  await requirePrincipal();
+  const p = officialSchema.safeParse(Object.fromEntries(form));
+  if (!p.success) return { error: p.error.issues[0]?.message };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("upsert_official", {
+    p_user: p.data.userId, p_appointment: p.data.appointment, p_display_name: p.data.displayName,
+    p_kedudukan: p.data.kedudukan || null, p_sk_ref: p.data.skRef || null,
+  });
+  if (error) {
+    return { error: error.code === "23514" ? "Pengguna ini harus berperan Notaris/PPAT dan aktif." : "Data pejabat gagal disimpan." };
+  }
+  revalidatePath("/admin/pengguna");
+  return { ok: "Data pejabat disimpan." };
+}

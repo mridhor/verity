@@ -46,7 +46,7 @@ export async function proxy(request: NextRequest) {
 
   const needsMfa = MFA_ROLES.has(String(claims.app_role ?? "")) && claims.aal !== "aal2";
   if (needsMfa && path !== "/masuk/mfa") return redirectTo("/masuk/mfa", path === "/masuk" ? undefined : path);
-  if (!needsMfa && (path === "/masuk" || path === "/masuk/mfa")) return redirectTo("/berkas");
+  if (!needsMfa && path === "/masuk") return redirectTo("/beranda");
   return response;
 }
 

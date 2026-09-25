@@ -25,6 +25,9 @@ class World:
         self.berkas_ajb = self.berkas(self.notary, "ajb", "AJB Kavling 14 Cilandak", [self.retno])
         self.berkas_firm = self.berkas(self.firm, "review_kontrak", "Review Kontrak Distribusi", [self.assoc])
 
+        self.off_notaris = self.official(self.sari, "notaris")
+        self.off_ppat = self.official(self.sari, "ppat")
+
     def _tenant(self, kind: str, name: str) -> uuid.UUID:
         return self.conn.execute(
             "insert into public.tenants (kind, name) values (%s, %s) returning id", (kind, name)
@@ -49,6 +52,39 @@ class World:
                 (bid, m, tenant, m),
             )
         return bid
+
+    def official(self, user: uuid.UUID, appointment: str) -> uuid.UUID:
+        return self.conn.execute(
+            "insert into public.officials (tenant_id, user_id, appointment, display_name) "
+            "values (%s, %s, %s, 'Sari Rahayu, S.H., M.Kn.') returning id",
+            (self.notary, user, appointment),
+        ).fetchone()["id"]
+
+    def person(self, name: str, tenant: uuid.UUID | None = None, nik: str | None = None) -> uuid.UUID:
+        return self.conn.execute(
+            "insert into public.persons (tenant_id, full_name, nik, created_by) values (%s, %s, %s, %s) returning id",
+            (tenant or self.notary, name, nik, self.andi),
+        ).fetchone()["id"]
+
+    def akta(self, berkas: uuid.UUID, official: uuid.UUID | None = None, title: str = "Akta Pendirian",
+             parties: list[uuid.UUID] | None = None) -> uuid.UUID:
+        aid = self.conn.execute(
+            "insert into public.akta (berkas_id, official_id, akta_type, title, created_by) "
+            "values (%s, %s, 'Pendirian PT', %s, %s) returning id",
+            (berkas, official or self.off_notaris, title, self.andi),
+        ).fetchone()["id"]
+        for i, p in enumerate(parties or []):
+            self.conn.execute(
+                "insert into public.akta_parties (akta_id, person_id, role, sort_order, created_by) "
+                "values (%s, %s, 'penghadap', %s, %s)",
+                (aid, p, i, self.andi),
+            )
+        return aid
+
+    def ready_for_signing(self, akta: uuid.UUID) -> None:
+        sari = self.as_(self.sari)
+        sari.run("select public.transition_akta_status(%s, 'verifikasi')", (akta,))
+        sari.run("select public.transition_akta_status(%s, 'menunggu_ttd')", (akta,))
 
     def role_of(self, user: uuid.UUID) -> tuple[uuid.UUID, str]:
         row = self.conn.execute(

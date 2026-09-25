@@ -7,6 +7,7 @@ import { APP_ROLES, ROLE_LABEL, type AppRole } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { setRole } from "./actions";
 import { AddMemberForm } from "./add-member-form";
+import { OfficialForm } from "./official-form";
 
 export default async function PenggunaPage() {
   const me = await requirePrincipal();
@@ -72,7 +73,14 @@ export default async function PenggunaPage() {
         </section>
 
         <section>
-          <h2 className="mb-3 text-[13.5px] font-semibold">Pejabat (pengangkatan)</h2>
+          <h2 className="mb-1 text-[13.5px] font-semibold">Pejabat (pengangkatan)</h2>
+          <p className="mb-3 text-[12px] text-subtle">
+            Setiap akta ditandatangani atas nama satu pengangkatan. Satu orang yang menjabat Notaris sekaligus PPAT memiliki dua entri,
+            dengan penomoran dan register yang terpisah.
+          </p>
+          <div className="mb-4 rounded-md border border-border bg-card p-4">
+            <OfficialForm notaries={(members ?? []).filter((m) => m.role === "notaris" && m.active).map((m) => ({ id: m.user_id, name: m.display_name }))} />
+          </div>
           {(officials ?? []).length === 0 ? (
             <p className="text-[13px] text-subtle">Belum ada data pengangkatan Notaris atau PPAT.</p>
           ) : (

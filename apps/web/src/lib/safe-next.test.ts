@@ -10,7 +10,7 @@ describe("safeNext", () => {
   it.each(["https://evil.example", "//evil.example", "/\\evil.example", "javascript:alert(1)", "", null, undefined])(
     "rejects %s",
     (value) => {
-      expect(safeNext(value)).toBe("/berkas");
+      expect(safeNext(value)).toBe("/beranda");
     },
   );
 
