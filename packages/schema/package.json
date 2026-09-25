@@ -1,0 +1,13 @@
+{
+  "name": "@verity/schema",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "gen": "node scripts/gen.mjs",
+    "check": "node scripts/gen.mjs && git diff --exit-code -- ../schema-ts/src ../../python/verity_schema/src"
+  },
+  "devDependencies": {
+    "json-schema-to-zod": "^2.8.1"
+  }
+}

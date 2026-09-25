@@ -1,0 +1,13 @@
+[project]
+name = "verity-db-tests"
+version = "0.0.0"
+description = "RLS, append-only and RPC tests for supabase/migrations (plain Postgres or Supabase)"
+requires-python = ">=3.12"
+dependencies = [
+  "pytest>=8",
+  "psycopg[binary]>=3.2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["."]
+addopts = "-ra"

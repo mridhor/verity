@@ -1,0 +1,45 @@
+# Local stack for `supabase start` (requires Docker). Production is self-hosted Supabase in
+# Jakarta configured through infra/selfhost (same hook, MFA and signing-key settings).
+project_id = "verity"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed/seed.sql"]
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000"]
+jwt_expiry = 3600
+enable_signup = false
+# Asymmetric ES256 keys: generate once with `supabase gen signing-key --algorithm ES256`.
+signing_keys_path = "./signing_keys.json"
+
+[auth.email]
+enable_signup = false
+
+[auth.mfa]
+max_enrolled_factors = 10
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[auth.hook.custom_access_token]
+enabled = true
+uri = "pg-functions://postgres/public/custom_access_token_hook"

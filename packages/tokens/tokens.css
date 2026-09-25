@@ -1,0 +1,31 @@
+/* Design tokens from docs/design/berkas-workspace.jsx (TRD §8).
+   Violet is reserved for authoritative elements: citations, approvals, the active step. */
+:root {
+  --background: #f5f5f0;        /* legal paper canvas */
+  --foreground: #1a1a18;        /* ink */
+  --card: #ffffff;
+  --card-foreground: #1a1a18;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a18;
+  --muted: #edece6;
+  --muted-foreground: #5c5b55;  /* ink2 */
+  --subtle-foreground: #8f8d85; /* ink3 */
+  --border: #e3e2db;            /* line */
+  --border-soft: #edece6;       /* line2 */
+  --input: #e3e2db;
+  --pane: #efeee8;              /* document pane */
+  --primary: #4a3e96;           /* notary stamp violet */
+  --primary-hover: #3b3180;
+  --primary-foreground: #ffffff;
+  --primary-soft: #eceaf6;
+  --secondary: #ffffff;
+  --secondary-foreground: #1a1a18;
+  --accent: #edece6;
+  --accent-foreground: #1a1a18;
+  --success: #2f7a4f;
+  --warning: #a86b12;
+  --destructive: #b23a2e;
+  --highlight: #f6eda6;         /* highlighter for cited anchors */
+  --ring: #4a3e96;
+  --radius: 6px;
+}

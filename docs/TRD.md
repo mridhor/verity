@@ -1,6 +1,6 @@
 # TECHNICAL REQUIREMENTS DOCUMENT (TRD)
 
-**Nama Proyek:** NotarisDigital, sistem agentic AI internal untuk kantor Notaris/PPAT dan firma hukum non-litigasi
+**Nama Proyek:** Verity, sistem agentic AI internal untuk kantor Notaris/PPAT dan firma hukum non-litigasi
 **Versi:** 1.2
 **Dokumen terkait:** `docs/PRD.md` (v1.0), `docs/design/berkas-workspace.jsx`
 **Tipe Arsitektur:** Decoupled polyglot (TypeScript frontend + Python AI engine)

@@ -1,0 +1,20 @@
+{
+  "name": "verity",
+  "private": true,
+  "packageManager": "pnpm@10.11.1",
+  "engines": {
+    "node": ">=20.9"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "gen:schema": "pnpm --filter @verity/schema run gen",
+    "db:test": "uv run --project supabase/tests pytest supabase/tests -q"
+  },
+  "devDependencies": {
+    "turbo": "^2.11.4"
+  }
+}

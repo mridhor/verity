@@ -1,0 +1,62 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# CI runs outside Indonesia: code and synthetic fixtures only, never client data.
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - uses: astral-sh/setup-uv@v6
+      - run: pnpm install --frozen-lockfile
+      - name: Schema codegen is up to date
+        run: pnpm --filter @verity/schema check
+      - run: pnpm --filter @verity/web lint
+      - run: pnpm --filter @verity/web typecheck
+      - run: pnpm --filter @verity/web build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --all-packages
+      - run: uvx ruff check python/verity_core apps/engine supabase/tests scripts
+      - run: uvx ruff format --check python/verity_core apps/engine supabase/tests scripts
+      - run: uv run pytest python/verity_core/tests apps/engine/tests -q
+
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env: { POSTGRES_PASSWORD: postgres }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv run --project supabase/tests pytest supabase/tests -q
+        env:
+          VERITY_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+
+  secrets-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No Supabase secret/service keys in app code or deploy config (rule 4)
+        run: |
+          if grep -rInE "sb_secret_[A-Za-z0-9]|SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY=" apps packages infra --exclude-dir=node_modules; then
+            echo "Secret key reference found"; exit 1
+          fi

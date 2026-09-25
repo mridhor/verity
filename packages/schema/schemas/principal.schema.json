@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://verity.local/schemas/principal.schema.json",
+  "title": "Principal",
+  "description": "Identity derived only from verified Supabase JWT claims (PLAN.md rule 5).",
+  "type": "object",
+  "properties": {
+    "user_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": ["string", "null"], "format": "uuid" },
+    "app_role": { "anyOf": [{ "$ref": "#/$defs/AppRole" }, { "type": "null" }] },
+    "aal": { "type": "string", "enum": ["aal1", "aal2"] }
+  },
+  "required": ["user_id", "aal"],
+  "additionalProperties": false,
+  "$defs": {
+    "AppRole": {
+      "title": "AppRole",
+      "type": "string",
+      "enum": ["notaris", "partner", "associate", "staf_admin", "super_admin"]
+    }
+  }
+}

@@ -1,0 +1,15 @@
+# uv workspace for the Python services. The DB tests (supabase/tests) are a separate project.
+[tool.uv.workspace]
+members = ["python/verity_schema", "python/verity_core", "apps/engine"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["python/verity_schema/src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "ASYNC"]
+ignore = ["S101"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S105", "S106", "S603", "S608", "E501"]
