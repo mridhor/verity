@@ -15,8 +15,4 @@ supabase/.branches/
 supabase/.temp/
 .DS_Store
 signing_keys.json
-
-# Cloudflare / OpenNext
-.open-next/
-.wrangler/
-.dev.vars
+.vercel

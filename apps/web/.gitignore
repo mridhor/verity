@@ -1,5 +1,2 @@
-
-# Cloudflare / OpenNext build output and local dev vars
-.open-next/
-.wrangler/
+# local env overrides (committed .env.example is fine)
 .dev.vars

@@ -50,11 +50,9 @@ Every place that reads one has a `.env.example` next to it — copy it, don't in
 | [`supabase/tests/.env.example`](supabase/tests/.env.example) | `pnpm db:test` | Optional; only needed to point tests at an already-running Postgres |
 | [`infra/selfhost/.env.example`](infra/selfhost/.env.example) | Self-hosted Supabase (production, Jakarta) | Merge into the upstream Compose stack's `.env` |
 
-**Cloudflare Workers Builds** (`apps/web/wrangler.jsonc`, demo/prototype deploy only — see
-that file's header comment on scope) takes the same two `apps/web/.env.example` values, but
-as dashboard **Build variables and secrets** (Worker → Settings → Build), not as a file or as
-Cloudflare's runtime vars/secrets — Next.js inlines `NEXT_PUBLIC_*` at build time, so a
-runtime-only variable would never reach the browser bundle.
+**Vercel** (monorepo): set the project **Root Directory** to `apps/web`. Put the same two
+`apps/web/.env.example` values in the Vercel project as **Environment Variables**. Next.js
+inlines `NEXT_PUBLIC_*` at build time.
 
 ## Rules that code must not break
 The ten non-negotiable rules and where each is enforced are in PLAN.md §10.1. In short: the
