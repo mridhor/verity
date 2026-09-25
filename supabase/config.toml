@@ -5,7 +5,7 @@ project_id = "verity"
 [api]
 enabled = true
 port = 54321
-schemas = ["public"]
+schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
@@ -23,8 +23,14 @@ port = 54323
 
 [auth]
 enabled = true
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000"]
+site_url = "https://verity-mridhors-projects.vercel.app/"
+additional_redirect_urls = [
+  "http://localhost:3000",
+  "https://verity-mridhors-projects.vercel.app/",
+  "https://verity-mridhors-projects.vercel.app/**",
+  "https://verity-*-mridhors-projects.vercel.app",
+  "https://verity-*-mridhors-projects.vercel.app/**",
+]
 jwt_expiry = 3600
 enable_signup = false
 # Asymmetric ES256 keys: generate once with `supabase gen signing-key --algorithm ES256`.
