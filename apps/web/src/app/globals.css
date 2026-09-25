@@ -42,3 +42,25 @@
     *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   }
 }
+
+/* Agent surfaces, from docs/design/berkas-workspace.jsx. Violet only for citations and approvals. */
+@layer components {
+  .cite {
+    display: inline-flex; align-items: center; gap: 4px; margin: 0 2px; padding: 3px 6px;
+    border-radius: 4px; background: var(--primary-soft); color: var(--primary);
+    font-family: var(--font-sans); font-size: 11.5px; line-height: 1; vertical-align: 1px; white-space: nowrap;
+  }
+  .cite:hover, .cite[data-active="1"] { background: var(--primary); color: var(--primary-foreground); }
+  .agent-p { font-family: var(--font-serif); font-size: 15.5px; line-height: 1.62; color: var(--foreground); }
+  .agent-p-sm { font-family: var(--font-serif); font-size: 14.5px; line-height: 1.6; color: var(--foreground); }
+  .stamp {
+    position: absolute; right: 16px; bottom: 12px; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; width: 108px; height: 108px; border: 2px solid var(--primary); border-radius: 9999px;
+    background: var(--card); color: var(--primary); text-align: center; opacity: .9; transform: rotate(-9deg);
+    box-shadow: inset 0 0 0 4px var(--card), inset 0 0 0 5px var(--primary); mix-blend-mode: multiply;
+    animation: stamp-in .35s cubic-bezier(.2, 1.6, .4, 1) both;
+  }
+  .agent-pulse { animation: agent-pulse 1.4s ease-in-out infinite; }
+}
+@keyframes stamp-in { from { transform: rotate(-9deg) scale(1.6); opacity: 0 } to { transform: rotate(-9deg) scale(1); opacity: .9 } }
+@keyframes agent-pulse { 50% { opacity: .4 } }
