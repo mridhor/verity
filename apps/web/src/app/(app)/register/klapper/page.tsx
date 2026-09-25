@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/shell/page-header";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, SearchForm, Section, Table, td } from "@/components/ui/blocks";
-import { requirePrincipal } from "@/lib/auth";
+import { isNotaryOffice, requirePrincipal } from "@/lib/auth";
 import { APPOINTMENT_LABEL, PARTY_ROLE_LABEL, formatAktaNumber, type PartyRole } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/server";
 import { cn, formatDate } from "@/lib/utils";
@@ -19,6 +19,7 @@ type Entry = {
 export default async function KlapperPage({ searchParams }: { searchParams: Promise<{ huruf?: string; q?: string; nama?: string }> }) {
   const me = await requirePrincipal();
   if (me.role === "super_admin") notFound();
+  if (!(await isNotaryOffice(me.tenantId))) notFound();
   const { huruf, q, nama } = await searchParams;
   const supabase = await createClient();
   const { data } = await supabase.from("klapper_entries")

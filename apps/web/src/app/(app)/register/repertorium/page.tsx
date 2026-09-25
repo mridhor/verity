@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/shell/page-header";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, Table, td } from "@/components/ui/blocks";
-import { requirePrincipal } from "@/lib/auth";
+import { isNotaryOffice, requirePrincipal } from "@/lib/auth";
 import { jakartaToday } from "@/lib/jakarta-time";
 import { formatAktaNumber } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/server";
@@ -14,6 +14,7 @@ import { AgentPageContext } from "@/components/agent/agent-provider";
 export default async function RepertoriumPage({ searchParams }: { searchParams: Promise<{ pejabat?: string; tahun?: string }> }) {
   const me = await requirePrincipal();
   if (me.role === "super_admin") notFound();
+  if (!(await isNotaryOffice(me.tenantId))) notFound();
   const { pejabat = "notaris", tahun = String(jakartaToday().year) } = await searchParams;
   const appointment = pejabat === "ppat" ? "ppat" : "notaris";
   const supabase = await createClient();

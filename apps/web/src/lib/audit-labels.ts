@@ -31,6 +31,17 @@ const LABELS: Record<string, string> = {
   "legal_references.insert": "Menambahkan dasar hukum",
   "legal_references.update": "Mengubah dasar hukum",
   "legal_references.delete": "Menghapus dasar hukum",
+  "legal.downloaded": "Mengunduh dasar hukum",
+  "tenant_member.renamed": "Mengubah nama pengguna",
+  "tenant_settings.updated": "Mengubah pengaturan kantor",
+  "auth.login": "Masuk",
+  "auth.logout": "Keluar",
+  "auth.mfa_verified": "Verifikasi 2FA",
+  "auth.password_changed": "Mengganti kata sandi",
+  "session.revoked_all": "Mencabut semua sesi kantor",
+  "proposal.created": "Agen mengusulkan perubahan",
+  "proposal.approved": "Menyetujui usulan agen",
+  "proposal.rejected": "Menolak usulan agen",
 };
 
 export const auditLabel = (action: string) => LABELS[action] ?? action;
@@ -43,8 +54,10 @@ export const AUDIT_MODULES: { id: string; label: string; prefixes: string[] }[] 
   { id: "pihak", label: "Data pihak", prefixes: ["persons.", "companies."] },
   { id: "jadwal", label: "Jadwal", prefixes: ["schedules."] },
   { id: "protokol", label: "Protokol", prefixes: ["protokol_transfers."] },
-  { id: "hukum", label: "Dasar hukum", prefixes: ["legal_references."] },
-  { id: "pengguna", label: "Pengguna", prefixes: ["tenant_member.", "tenant.", "official."] },
+  { id: "hukum", label: "Dasar hukum", prefixes: ["legal_references.", "legal."] },
+  { id: "agen", label: "Usulan agen", prefixes: ["proposal."] },
+  { id: "pengguna", label: "Pengguna", prefixes: ["tenant_member.", "tenant.", "tenant_settings.", "official."] },
+  { id: "auth", label: "Autentikasi", prefixes: ["auth.", "session."] },
 ];
 
 export function auditModule(action: string) {

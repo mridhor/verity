@@ -53,3 +53,10 @@ export async function requirePrincipal(): Promise<ActivePrincipal> {
 export function needsMfa(p: Principal) {
   return !!p.role && MFA_REQUIRED.has(p.role) && p.aal !== "aal2";
 }
+
+/** Registers and protokol exist only for a notary office, not for a law firm. */
+export async function isNotaryOffice(tenantId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase.from("tenants").select("kind").eq("id", tenantId).maybeSingle();
+  return data?.kind === "kantor_notaris";
+}

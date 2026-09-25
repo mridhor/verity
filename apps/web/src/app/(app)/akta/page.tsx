@@ -3,7 +3,9 @@ import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { AKTA_STATUS_TONE, Badge } from "@/components/ui/badge";
 import { EmptyState, FilterChips, SearchForm, Table, td } from "@/components/ui/blocks";
+import { notFound } from "next/navigation";
 import { requirePrincipal } from "@/lib/auth";
+import { aktaIdsMatching, likeTerm } from "@/lib/search/akta";
 import { APPOINTMENT_LABEL, AKTA_STATUSES, AKTA_STATUS_LABEL, PARTY_ROLE_LABEL, formatAktaNumber, type AktaStatus, type PartyRole } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
@@ -13,6 +15,7 @@ type Party = { role: PartyRole; sort_order: number; persons: { full_name: string
 
 export default async function AktaListPage({ searchParams }: { searchParams: Promise<{ status?: string; q?: string }> }) {
   const me = await requirePrincipal();
+  if (me.role === "super_admin") notFound(); // no client content for the Super Admin (C-17)
   const { status, q } = await searchParams;
   const supabase = await createClient();
   let query = supabase
@@ -21,8 +24,16 @@ export default async function AktaListPage({ searchParams }: { searchParams: Pro
     .order("created_at", { ascending: false })
     .limit(200);
   if (status && (AKTA_STATUSES as readonly string[]).includes(status)) query = query.eq("status", status);
-  if (q) query = query.or(`title.ilike.%${q.replace(/[%,()]/g, " ")}%,akta_type.ilike.%${q.replace(/[%,()]/g, " ")}%`);
-  const { data: rows, error } = await query;
+  if (q?.trim()) {
+    // Title or type, plus akta number and party names (PRD: cari nomor, pihak, jenis).
+    const ids = await aktaIdsMatching(supabase, q);
+    const like = likeTerm(q);
+    query = query.or([`title.ilike.${like}`, `akta_type.ilike.${like}`, ...(ids.length ? [`id.in.(${ids.join(",")})`] : [])].join(","));
+  }
+  const [{ data: rows, error }, { count: total }] = await Promise.all([
+    query,
+    supabase.from("akta").select("id", { count: "exact", head: true }),
+  ]);
 
   const partyName = (p: Party) => p.persons?.full_name ?? (p.companies ? `${p.companies.legal_form} ${p.companies.name}` : "");
 
@@ -32,6 +43,7 @@ export default async function AktaListPage({ searchParams }: { searchParams: Pro
       <PageHeader
         eyebrow={me.role === "notaris" ? "Semua akta kantor" : "Akta di berkas tempat Anda ditugaskan"}
         title="Manajemen akta"
+        meta={<span>{total ?? 0} akta terdaftar</span>}
         actions={
           <Link href="/akta/baru" className="inline-flex h-8 items-center gap-1.5 rounded-md bg-foreground px-3 text-[13px] font-medium text-card hover:bg-foreground/90">
             <Plus size={14} /> Akta baru
@@ -40,7 +52,7 @@ export default async function AktaListPage({ searchParams }: { searchParams: Pro
       />
       <div className="mx-auto w-full max-w-[1100px] space-y-4 px-8 py-7">
         <div className="flex flex-wrap items-center gap-3">
-          <SearchForm action="/akta" value={q} placeholder="Cari judul atau jenis akta" hidden={{ status }} />
+          <SearchForm action="/akta" value={q} placeholder="Cari nomor, pihak, judul, atau jenis akta" hidden={{ status }} />
           <FilterChips base="/akta" param="status" value={status} extra={{ q }}
             options={AKTA_STATUSES.map((s) => ({ value: s, label: AKTA_STATUS_LABEL[s] }))} />
         </div>

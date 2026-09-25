@@ -27,6 +27,7 @@ const NOTARIS_ONLY = "Hanya Notaris yang dapat melakukan ini.";
 
 export default async function AktaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const me = await requirePrincipal();
+  if (me.role === "super_admin") notFound(); // no client content for the Super Admin (C-17)
   const { id } = await params;
   const supabase = await createClient();
   const { data: akta } = await supabase
@@ -51,7 +52,7 @@ export default async function AktaDetailPage({ params }: { params: Promise<{ id:
   const nameOf = new Map((colleagues ?? []).map((c) => [c.user_id, c.display_name]));
   const isNotaris = me.role === "notaris";
   const isOfficial = official.user_id === me.userId;
-  const canWrite = me.role !== "super_admin";
+  const canWrite = true; // the Super Admin never reaches this page
   const editable = canWrite && (status === "draft" || status === "verifikasi");
   const number = formatAktaNumber(akta.number, akta.number_period);
   const partyList = ((parties ?? []) as unknown as PartyRow[]);

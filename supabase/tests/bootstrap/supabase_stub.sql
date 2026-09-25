@@ -23,7 +23,17 @@ create table if not exists auth.users (
   raw_user_meta_data jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
+alter table auth.users add column if not exists last_sign_in_at timestamptz;
 grant select on auth.users to supabase_auth_admin;
+
+create table if not exists auth.sessions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz,
+  not_after timestamptz,
+  aal text
+);
 
 create or replace function auth.jwt() returns jsonb language sql stable as $$
   select coalesce(
