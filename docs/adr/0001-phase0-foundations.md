@@ -27,5 +27,18 @@ the same tests against `postgres:17`; they can also target a real Supabase stack
 ## Not done in Phase 0 yet (blocked or pending)
 - Jakarta infrastructure, backups and restore drill: blocked on D-01 (cloud provider) and D-02.
 - In-region edge (WAF, rate limit, JWT check 1): blocked on D-01 and D-09.
-- Auth email provider for invites/password reset: D-10.
-- Password change screen for first login.
+- Auth email provider (custom SMTP): D-10. Until then Supabase's built-in sender only delivers to
+  the project's team members, is heavily rate-limited, and blocks custom email templates.
+
+## Password reset (added 2026-09-25)
+All login state is Supabase Auth; the app never stores or checks passwords itself.
+- `/masuk/lupa-sandi` calls `resetPasswordForEmail`. The response is the same whether or not the
+  email has an account (no account discovery).
+- `/auth/konfirmasi` accepts a PKCE `code` (default template, same browser) or a `token_hash`
+  (`supabase/templates`, any device, also used for invites) and only follows same-origin `next` paths.
+- `/masuk/sandi-baru` calls `updateUser`, then signs out the account's other sessions. Privileged
+  roles pass TOTP first (proxy.ts sends them to `/masuk/mfa?next=...`). Signed-in users reach it
+  from the sidebar to replace a temporary password.
+- Supabase enforces `minimum_password_length = 10`, matching the form.
+- The token-hash templates are committed but disabled in `supabase/config.toml`: the free tier
+  refuses template changes while the built-in sender is in use. Enable them together with D-10.

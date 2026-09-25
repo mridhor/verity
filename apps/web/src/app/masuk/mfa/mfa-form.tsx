@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 type Enrolment = { factorId: string; qr: string; secret: string };
 
 /** TOTP enrolment (first time) or verification, raising the session to aal2 (REQ-GW-05). */
-export function MfaForm() {
+export function MfaForm({ next }: { next: string }) {
   const router = useRouter();
   const [factorId, setFactorId] = useState<string | null>(null);
   const [enrolment, setEnrolment] = useState<Enrolment | null>(null);
@@ -43,7 +43,7 @@ export function MfaForm() {
     const { error } = await createClient().auth.mfa.challengeAndVerify({ factorId, code: code.trim() });
     setBusy(false);
     if (error) return setError("Kode tidak cocok atau sudah kedaluwarsa.");
-    router.replace("/berkas");
+    router.replace(next);
     router.refresh();
   }
 

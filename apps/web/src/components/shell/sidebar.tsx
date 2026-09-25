@@ -60,6 +60,9 @@ export function Sidebar({ me, berkas, tenants }: Props) {
             <button className="text-[11.5px] text-subtle hover:text-foreground">Keluar</button>
           </form>
         </div>
+        <Link href="/masuk/sandi-baru" className="mt-2 block text-[11.5px] text-subtle hover:text-foreground">
+          Ubah kata sandi
+        </Link>
       </div>
     </nav>
   );

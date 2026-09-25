@@ -23,9 +23,10 @@ port = 54323
 
 [auth]
 enabled = true
-site_url = "https://verity-mridhors-projects.vercel.app/"
+site_url = "https://verity-mridhors-projects.vercel.app"
 additional_redirect_urls = [
   "http://localhost:3000",
+  "http://localhost:3000/**",
   "https://verity-mridhors-projects.vercel.app/",
   "https://verity-mridhors-projects.vercel.app/**",
   "https://verity-*-mridhors-projects.vercel.app",
@@ -33,10 +34,24 @@ additional_redirect_urls = [
 ]
 jwt_expiry = 3600
 enable_signup = false
+# Server-side floor; apps/web/src/lib/password.ts uses the same value.
+minimum_password_length = 10
 # Asymmetric ES256 keys: generate once with `supabase gen signing-key --algorithm ES256`.
 
 [auth.email]
 enable_signup = false
+
+# Token-hash email templates (links work on any device; invites land on /masuk/sandi-baru).
+# Supabase refuses template changes on the free tier while the built-in email sender is used,
+# so these stay off until a custom SMTP provider is configured (PLAN.md D-10). Until then the
+# default templates send a PKCE link, which /auth/konfirmasi also handles (same browser only).
+# [auth.email.template.recovery]
+# subject = "Atur ulang kata sandi Verity"
+# content_path = "./supabase/templates/recovery.html"
+#
+# [auth.email.template.invite]
+# subject = "Undangan ke Verity"
+# content_path = "./supabase/templates/invite.html"
 
 [auth.mfa]
 max_enrolled_factors = 10

@@ -16,3 +16,7 @@ supabase/.temp/
 .DS_Store
 signing_keys.json
 .vercel
+
+# Build output from the abandoned Cloudflare/OpenNext attempt; never commit
+.open-next/
+.wrangler/
