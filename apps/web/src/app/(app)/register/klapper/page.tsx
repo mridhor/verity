@@ -7,6 +7,7 @@ import { requirePrincipal } from "@/lib/auth";
 import { APPOINTMENT_LABEL, PARTY_ROLE_LABEL, formatAktaNumber, type PartyRole } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/server";
 import { cn, formatDate } from "@/lib/utils";
+import { AgentPageContext } from "@/components/agent/agent-provider";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -38,6 +39,7 @@ export default async function KlapperPage({ searchParams }: { searchParams: Prom
 
   return (
     <>
+      <AgentPageContext context={{ kind: "kantor", label: "Buku klapper", page: "register" }} suggestions={["cari Laras di klapper", "akta final bulan ini"]} />
       <PageHeader eyebrow="Register" title="Buku klapper digital"
         meta={<span>{byName.size} nama terindeks. Terbentuk otomatis dari pihak pada akta yang sudah final.</span>} />
       <div className="mx-auto w-full max-w-[1100px] space-y-4 px-8 py-7">

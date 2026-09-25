@@ -3,6 +3,7 @@ import {
   BookMarked, BookOpen, CalendarDays, FileText, FolderArchive, FolderOpen, Home, Library, ScrollText,
   ShieldCheck, Users, ArrowLeftRight,
 } from "lucide-react";
+import { PaletteTrigger } from "@/components/agent/command-palette";
 import { Dot } from "@/components/ui/input";
 import { ROLE_LABEL, type AppRole } from "@/lib/roles";
 import { NavLink } from "./nav-link";
@@ -36,6 +37,7 @@ export function Sidebar({ me, tenantKind, berkas, tenants }: Props) {
       <Link href="/beranda" className="px-[18px] pt-[18px] pb-2 font-serif text-[19px] font-semibold">
         Verity
       </Link>
+      <div className="px-3 pt-1"><PaletteTrigger /></div>
 
       <Group label="Kerja">
         <NavLink href="/beranda" icon={<Home size={15} />}>Beranda</NavLink>

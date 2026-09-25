@@ -6,6 +6,8 @@ import { requirePrincipal } from "@/lib/auth";
 import { formatTime, jakartaInstant, jakartaToday } from "@/lib/jakarta-time";
 import { AKTA_STATUSES, AKTA_STATUS_LABEL, SCHEDULE_KIND_LABEL, formatAktaNumber, type AktaStatus, type ScheduleKind } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/server";
+import { formatDateTime } from "@/lib/utils";
+import { AgentPageContext } from "@/components/agent/agent-provider";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 
@@ -18,7 +20,9 @@ export default async function BerandaPage() {
   const tomorrow = new Date(`${today.date}T00:00:00Z`);
   tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
 
-  const [finalThisYear, statusRows, recent, schedules, docs, minuta, protokol] = await Promise.all([
+  // Proposals this user may decide: Notaris and Partner decide both tiers, other members the staff tier.
+  const tiers = me.role === "notaris" || me.role === "partner" ? ["staf", "notaris"] : ["staf"];
+  const [finalThisYear, statusRows, recent, schedules, docs, minuta, protokol, pending] = await Promise.all([
     supabase.from("akta").select("akta_date").gte("akta_date", yearStart).in("status", ["selesai", "diarsipkan"]),
     supabase.from("akta").select("status"),
     supabase.from("akta").select("id, title, akta_type, status, number, number_period, updated_at").order("updated_at", { ascending: false }).limit(5),
@@ -28,7 +32,13 @@ export default async function BerandaPage() {
     supabase.from("documents").select("id", { count: "exact", head: true }),
     supabase.from("documents").select("id", { count: "exact", head: true }).eq("doc_type", "minuta"),
     supabase.from("protokol_transfers").select("akta_count, status"),
+    supabase.from("proposed_changes").select("id, tier, items, created_at, berkas(id, title)")
+      .eq("status", "pending").in("tier", tiers).gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false }).limit(6),
   ]);
+  const pendingRows = (pending.data ?? []) as unknown as {
+    id: string; tier: string; items: { label: string }[]; created_at: string; berkas: { id: string; title: string } | null;
+  }[];
 
   const perMonth = Array.from({ length: 12 }, () => 0);
   let thisMonth = 0;
@@ -45,6 +55,7 @@ export default async function BerandaPage() {
 
   return (
     <>
+      <AgentPageContext context={{ kind: "kantor", label: "Seluruh kantor", page: "beranda" }} suggestions={["akta menunggu TTD", "jadwal hari ini", "tenggat minggu ini", "akta final bulan ini"]} />
       <PageHeader eyebrow="Ringkasan operasional kantor hari ini" title="Beranda" />
       <div className="mx-auto w-full max-w-[1040px] space-y-5 px-8 py-7">
         {me.role === "super_admin" && (
@@ -58,6 +69,26 @@ export default async function BerandaPage() {
           <StatCard label="Menunggu tanda tangan" value={byStatus.menunggu_ttd} sub={byStatus.menunggu_ttd ? "Perlu tindak lanjut" : undefined} />
           <StatCard label="Dokumen tersimpan" value={docs.count ?? 0} />
         </div>
+
+        {pendingRows.length > 0 && (
+          <Section title="Menunggu persetujuan saya">
+            <ul>
+              {pendingRows.map((p) => (
+                <li key={p.id} className="flex items-center justify-between gap-3 border-b border-border-soft py-2.5 last:border-0">
+                  <Link href={`/berkas/${p.berkas?.id}?tab=percakapan`} className="min-w-0">
+                    <div className="truncate text-[13px] font-medium hover:underline">
+                      {p.items.map((i) => i.label).join("; ")}
+                    </div>
+                    <div className="text-[11.5px] text-subtle">
+                      {p.berkas?.title} · diusulkan agen {formatDateTime(p.created_at)}
+                    </div>
+                  </Link>
+                  <Badge tone={p.tier === "notaris" ? "warning" : "neutral"}>{p.tier === "notaris" ? "Perlu Notaris" : "Staf"}</Badge>
+                </li>
+              ))}
+            </ul>
+          </Section>
+        )}
 
         <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
           <Section title={`Akta final per bulan — ${today.year}`}>

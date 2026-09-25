@@ -15,6 +15,7 @@ import { createClient } from "@/lib/supabase/server";
 import { cn, formatDate, formatDateTime } from "@/lib/utils";
 import { deleteDraft, removeParty } from "../actions";
 import { AddPartyForms, EditAktaForm, FinalizeForm, TransitionButton } from "./akta-forms";
+import { AgentPageContext } from "@/components/agent/agent-provider";
 
 type PartyRow = {
   id: string; role: PartyRole; capacity: string | null; sort_order: number;
@@ -59,6 +60,10 @@ export default async function AktaDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <>
+      <AgentPageContext
+        context={{ kind: "akta", label: `Akta ${number ?? akta.title}`, berkasId: berkas.id, aktaId: akta.id }}
+        suggestions={["apa yang kurang sebelum difinalkan?", "siapa penghadapnya", "dokumen akta ini", "ajukan verifikasi"]}
+      />
       <PageHeader
         eyebrow={`Akta / ${akta.akta_type}`}
         title={akta.title}

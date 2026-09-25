@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Check } from "lucide-react";
+import { AgentPageContext } from "@/components/agent/agent-provider";
+import { BerkasWorkspace } from "@/components/agent/berkas-workspace";
 import { DocumentTable, type DocumentRow } from "@/components/documents/document-table";
 import { UploadForm } from "@/components/documents/upload-form";
 import { PageHeader } from "@/components/shell/page-header";
@@ -21,7 +23,7 @@ import { deleteChecklistItem, toggleChecklistItem } from "../checklist-actions";
 import { ChecklistForm } from "./checklist-form";
 
 const TABS = [
-  { id: "percakapan", label: "Percakapan", note: "Agen baca-saja dengan sitasi hadir pada R1b." },
+  { id: "percakapan", label: "Percakapan" },
   { id: "akta", label: "Akta" },
   { id: "dokumen", label: "Dokumen" },
   { id: "checklist", label: "Checklist" },
@@ -41,7 +43,7 @@ export default async function BerkasPage({
   const me = await requirePrincipal();
   const { id } = await params;
   const requestedTab = (await searchParams).tab;
-  const tab: TabId = TABS.find((t) => t.id === requestedTab)?.id ?? "aktivitas";
+  const tab: TabId = TABS.find((t) => t.id === requestedTab)?.id ?? "percakapan";
   const supabase = await createClient();
 
   const { data: berkas } = await supabase
@@ -124,12 +126,14 @@ export default async function BerkasPage({
         </div>
       </PageHeader>
 
+      <AgentPageContext
+        context={{ kind: "berkas", label: `Berkas: ${berkas.title}`, berkasId: berkas.id }}
+        suggestions={["cek kelengkapan dokumen pendiri", "ringkasan berkas", "siapa saja pihaknya", "apa yang kurang sebelum difinalkan?"]}
+      />
+      {tab === "percakapan" ? (
+        <div className="flex min-h-[520px] flex-1"><BerkasWorkspace /></div>
+      ) : (
       <div className={cn("mx-auto w-full px-8 py-7", tab === "dokumen" || tab === "akta" ? "max-w-[1000px]" : "max-w-[720px]")}>
-        {TABS.map((t) =>
-          t.id === tab && "note" in t ? (
-            <p key={t.id} className="py-16 text-center text-[13px] text-subtle">{t.note}</p>
-          ) : null,
-        )}
 
         {tab === "akta" && (
           <div className="space-y-4">
@@ -265,6 +269,7 @@ export default async function BerkasPage({
           </div>
         )}
       </div>
+      )}
     </>
   );
 }

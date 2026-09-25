@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
 import { toggleBookmark, verifyReference } from "./actions";
 import { ReferenceForm } from "./reference-form";
+import { AgentPageContext } from "@/components/agent/agent-provider";
 
 type Ref = {
   id: string; category: LegalCategory; number_label: string; title: string; year: number | null;
@@ -69,6 +70,7 @@ export default async function DasarHukumPage({ searchParams }: { searchParams: P
   const bookmarked = rows.filter((r) => marked.has(r.id));
   return (
     <>
+      <AgentPageContext context={{ kind: "kantor", label: "Dasar hukum", page: "dasar_hukum" }} suggestions={["dasar hukum fidusia", "dasar hukum jabatan notaris", "dasar hukum perseroan terbatas"]} />
       <PageHeader eyebrow="Referensi" title="Portal dasar hukum"
         meta={<span>Referensi peraturan dan putusan untuk kenotariatan. Setiap entri perlu diverifikasi Notaris sebelum diandalkan.</span>} />
       <div className="mx-auto w-full max-w-[1000px] space-y-5 px-8 py-7">

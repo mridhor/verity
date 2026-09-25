@@ -10,6 +10,7 @@ import { SCHEDULE_KINDS, SCHEDULE_KIND_LABEL, type ScheduleKind } from "@/lib/la
 import { createClient } from "@/lib/supabase/server";
 import { deleteSchedule } from "./actions";
 import { ScheduleForm } from "./schedule-form";
+import { AgentPageContext } from "@/components/agent/agent-provider";
 
 const TONE: Record<ScheduleKind, BadgeTone> = { pertemuan_klien: "info", penandatanganan: "warning", internal: "neutral" };
 
@@ -37,6 +38,7 @@ export default async function JadwalPage({ searchParams }: { searchParams: Promi
 
   return (
     <>
+      <AgentPageContext context={{ kind: "kantor", label: "Jadwal kantor", page: "jadwal" }} suggestions={["jadwal hari ini", "jadwal besok", "jadwal minggu ini", "tenggat minggu ini"]} />
       <PageHeader eyebrow="Agenda operasional kantor" title="Jadwal" />
       <div className="mx-auto w-full max-w-[900px] space-y-5 px-8 py-7">
         <ScheduleForm today={today} berkas={berkas ?? []} />

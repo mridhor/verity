@@ -254,7 +254,7 @@ export async function proposeSchedule(c: Ctx, text: string) {
   const date = parseDate(text);
   const time = parseTime(text);
   if (!date || !time) return void c.run.say("Sebutkan tanggal dan jamnya, misalnya \"jadwalkan penandatanganan besok 14.00 di Ruang Utama\".");
-  const kind: ScheduleKind = /(tanda ?tangan|ttd)/.test(text) ? "penandatanganan" : /(internal|rapat)/.test(text) ? "internal" : "pertemuan_klien";
+  const kind: ScheduleKind = /(tanda ?tangan|penandatangan|ttd)/.test(text) ? "penandatanganan" : /(internal|rapat)/.test(text) ? "internal" : "pertemuan_klien";
   const location = text.match(/\bdi\s+(ruang[^,.;]*|kantor[^,.;]*)/i)?.[1]?.trim();
   const title = (text.replace(/\b(hari ini|besok|lusa|senin|selasa|rabu|kamis|jumat|sabtu|minggu)\b.*$/i, "").trim() || SCHEDULE_KIND_LABEL[kind]);
   const nice = title.charAt(0).toUpperCase() + title.slice(1);

@@ -7,6 +7,7 @@ import { requirePrincipal } from "@/lib/auth";
 import { APPOINTMENT_LABEL, AKTA_STATUSES, AKTA_STATUS_LABEL, PARTY_ROLE_LABEL, formatAktaNumber, type AktaStatus, type PartyRole } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
+import { AgentPageContext } from "@/components/agent/agent-provider";
 
 type Party = { role: PartyRole; sort_order: number; persons: { full_name: string } | null; companies: { name: string; legal_form: string } | null };
 
@@ -27,6 +28,7 @@ export default async function AktaListPage({ searchParams }: { searchParams: Pro
 
   return (
     <>
+      <AgentPageContext context={{ kind: "kantor", label: "Seluruh kantor", page: "lainnya" }} suggestions={["akta menunggu TTD", "akta final bulan ini", "akta dalam verifikasi", "draft akta"]} />
       <PageHeader
         eyebrow={me.role === "notaris" ? "Semua akta kantor" : "Akta di berkas tempat Anda ditugaskan"}
         title="Manajemen akta"

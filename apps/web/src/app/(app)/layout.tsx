@@ -1,3 +1,6 @@
+import { AgentProvider } from "@/components/agent/agent-provider";
+import { CommandPalette } from "@/components/agent/command-palette";
+import { AgentSidecar } from "@/components/agent/sidecar";
 import { Sidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
 import { requirePrincipal } from "@/lib/auth";
@@ -16,6 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const tenantKind = (tenants ?? []).find((t) => t.id === me.tenantId)?.kind ?? "kantor_notaris";
 
   return (
+    <AgentProvider>
     <div className="flex h-screen">
       <Sidebar
         me={{ role: me.role, tenantId: me.tenantId, name: self?.display_name ?? me.email ?? "" }}
@@ -27,6 +31,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <Topbar notifications={notes ?? []} unread={unread ?? 0} />
         {children}
       </main>
+      <AgentSidecar />
     </div>
+    <CommandPalette />
+    </AgentProvider>
   );
 }

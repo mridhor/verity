@@ -1,4 +1,5 @@
 import { Bell } from "lucide-react";
+import { AgentToggleButton } from "@/components/agent/sidecar";
 import { formatLongDate, jakartaToday } from "@/lib/jakarta-time";
 import { formatDateTime } from "@/lib/utils";
 import { markAllNotificationsRead } from "./notification-actions";
@@ -49,6 +50,7 @@ export function Topbar({ notifications, unread }: { notifications: Note[]; unrea
           )}
         </div>
       </details>
+      <AgentToggleButton />
     </div>
   );
 }

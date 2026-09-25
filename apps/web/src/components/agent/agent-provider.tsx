@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { agentEventSchema } from "@verity/schema-ts";
 import { contextKey } from "@/lib/agent/context-key";
@@ -36,6 +36,18 @@ type AgentApi = {
 const Ctx = createContext<AgentApi | null>(null);
 const DEFAULT_CONTEXT: AgentContext = { kind: "kantor", label: "Seluruh kantor", page: "lainnya" };
 const DEFAULT_SUGGESTIONS = ["akta menunggu TTD", "jadwal hari ini", "tenggat minggu ini", "cari Laras di klapper"];
+const EMPTY_THREAD: ThreadState = { threadId: null, messages: [], loaded: false };
+
+// Whether the sidecar is open survives reloads on desktop (on a phone it would cover the page),
+// read from localStorage without a hydration mismatch.
+const OPEN_KEY = "verity.agent.open";
+const openListeners = new Set<() => void>();
+let openNow: boolean | null = null;
+const openStore = {
+  subscribe: (fn: () => void) => { openListeners.add(fn); return () => { openListeners.delete(fn); }; },
+  get: () => (openNow ??= window.localStorage.getItem(OPEN_KEY) === "1" && window.matchMedia("(min-width: 768px)").matches),
+  set: (v: boolean) => { openNow = v; window.localStorage.setItem(OPEN_KEY, v ? "1" : "0"); openListeners.forEach((fn) => fn()); },
+};
 
 export function useAgent() {
   const v = useContext(Ctx);
@@ -46,7 +58,7 @@ export function useAgent() {
 export function AgentProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [open, setOpenState] = useState(false);
+  const open = useSyncExternalStore(openStore.subscribe, openStore.get, () => false);
   const [embedded, setEmbedded] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [registered, setRegistered] = useState<Registered | null>(null);
@@ -60,15 +72,8 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   const context = active?.context ?? DEFAULT_CONTEXT;
   const suggestions = active?.suggestions ?? DEFAULT_SUGGESTIONS;
   const key = contextKey(context);
-  const thread = threads[key] ?? { threadId: null, messages: [], loaded: false };
-
-  useEffect(() => {
-    setOpenState(window.localStorage.getItem("verity.agent.open") === "1");
-  }, []);
-  const setOpen = useCallback((v: boolean) => {
-    setOpenState(v);
-    window.localStorage.setItem("verity.agent.open", v ? "1" : "0");
-  }, []);
+  const thread = threads[key] ?? EMPTY_THREAD;
+  const setOpen = useCallback((v: boolean) => openStore.set(v), []);
 
   // Load the stored thread for this context once.
   useEffect(() => {
@@ -150,11 +155,12 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     else router.push(target.href);
   }, [router]);
 
+  const setCiteHandler = useCallback((fn: ((t: CitationTarget) => void) | null) => { citeHandler.current = fn; }, []);
+
   const api = useMemo<AgentApi>(() => ({
     open, embedded, context, suggestions, thread, busy, paletteOpen, activeCite,
-    setOpen, setPaletteOpen, setEmbedded, register: setRegistered, send, newThread, onCite,
-    setCiteHandler: (fn) => { citeHandler.current = fn; },
-  }), [open, embedded, context, suggestions, thread, busy, paletteOpen, activeCite, setOpen, send, newThread, onCite]);
+    setOpen, setPaletteOpen, setEmbedded, register: setRegistered, send, newThread, onCite, setCiteHandler,
+  }), [open, embedded, context, suggestions, thread, busy, paletteOpen, activeCite, setOpen, send, newThread, onCite, setCiteHandler]);
 
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
 }

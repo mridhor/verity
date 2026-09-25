@@ -9,6 +9,7 @@ import { formatAktaNumber } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { CorrectionForm } from "./correction-form";
+import { AgentPageContext } from "@/components/agent/agent-provider";
 
 export default async function RepertoriumPage({ searchParams }: { searchParams: Promise<{ pejabat?: string; tahun?: string }> }) {
   const me = await requirePrincipal();
@@ -31,6 +32,7 @@ export default async function RepertoriumPage({ searchParams }: { searchParams: 
 
   return (
     <>
+      <AgentPageContext context={{ kind: "kantor", label: "Repertorium", page: "register" }} suggestions={["repertorium notaris 2026", "repertorium PPAT 2026", "akta final bulan ini"]} />
       <PageHeader eyebrow="Register" title={`Repertorium ${appointment === "ppat" ? "PPAT" : "Notaris"} ${tahun}`}
         meta={<span>Terbentuk otomatis saat akta difinalkan. Entri tidak dapat diubah atau dihapus; koreksi dicatat sebagai entri baru.</span>} />
       <div className="mx-auto w-full max-w-[1100px] space-y-4 px-8 py-7">

@@ -5,6 +5,7 @@ import { berkasType } from "@/lib/berkas-types";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
 import { NewBerkasForm } from "./new-berkas-form";
+import { AgentPageContext } from "@/components/agent/agent-provider";
 
 export default async function BerkasListPage() {
   const me = await requirePrincipal();
@@ -19,6 +20,7 @@ export default async function BerkasListPage() {
 
   return (
     <>
+      <AgentPageContext context={{ kind: "kantor", label: "Seluruh kantor", page: "lainnya" }} suggestions={["buka berkas Sinar Kopi", "tenggat minggu ini", "akta menunggu TTD"]} />
       <PageHeader eyebrow={scope} title="Berkas" actions={me.role !== "super_admin" ? <NewBerkasForm /> : undefined} />
       <div className="mx-auto w-full max-w-[960px] px-8 py-7">
         {error && <p role="alert" className="text-destructive">Daftar berkas gagal dimuat.</p>}

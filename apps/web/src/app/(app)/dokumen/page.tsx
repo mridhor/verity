@@ -6,6 +6,7 @@ import { EmptyState, FilterChips, SearchForm, StatCard } from "@/components/ui/b
 import { requirePrincipal } from "@/lib/auth";
 import { DOCUMENT_TYPES, DOCUMENT_TYPE_LABEL, fileFormat, formatAktaNumber } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/server";
+import { AgentPageContext } from "@/components/agent/agent-provider";
 
 const FORMATS = ["PDF", "JPG", "PNG", "DOCX"];
 
@@ -32,6 +33,7 @@ export default async function DokumenPage({ searchParams }: { searchParams: Prom
 
   return (
     <>
+      <AgentPageContext context={{ kind: "kantor", label: "Minuta & dokumen", page: "dokumen" }} suggestions={["dokumen KTP Laras", "dokumen terbaru", "minuta akta final bulan ini"]} />
       <PageHeader eyebrow="Arsip dokumen berkas, tersimpan privat dan tercatat setiap aksesnya" title="Minuta & dokumen" />
       <div className="mx-auto w-full max-w-[1100px] space-y-5 px-8 py-7">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
