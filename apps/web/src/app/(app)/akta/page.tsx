@@ -6,6 +6,8 @@ import { EmptyState, FilterChips, SearchForm, Table, td } from "@/components/ui/
 import { notFound } from "next/navigation";
 import { requirePrincipal } from "@/lib/auth";
 import { aktaIdsMatching, likeTerm } from "@/lib/search/akta";
+import { NewAktaDialog } from "./baru/new-akta-form";
+import { newAktaOptions } from "./baru/options";
 import { APPOINTMENT_LABEL, AKTA_STATUSES, AKTA_STATUS_LABEL, PARTY_ROLE_LABEL, formatAktaNumber, type AktaStatus, type PartyRole } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
@@ -30,9 +32,10 @@ export default async function AktaListPage({ searchParams }: { searchParams: Pro
     const like = likeTerm(q);
     query = query.or([`title.ilike.${like}`, `akta_type.ilike.${like}`, ...(ids.length ? [`id.in.(${ids.join(",")})`] : [])].join(","));
   }
-  const [{ data: rows, error }, { count: total }] = await Promise.all([
+  const [{ data: rows, error }, { count: total }, newAkta] = await Promise.all([
     query,
     supabase.from("akta").select("id", { count: "exact", head: true }),
+    newAktaOptions(),
   ]);
 
   const partyName = (p: Party) => p.persons?.full_name ?? (p.companies ? `${p.companies.legal_form} ${p.companies.name}` : "");
@@ -45,9 +48,7 @@ export default async function AktaListPage({ searchParams }: { searchParams: Pro
         title="Manajemen akta"
         meta={<span>{total ?? 0} akta terdaftar</span>}
         actions={
-          <Link href="/akta/baru" className="inline-flex h-8 items-center gap-1.5 rounded-md bg-foreground px-3 text-[13px] font-medium text-card hover:bg-foreground/90">
-            <Plus size={14} /> Akta baru
-          </Link>
+          <NewAktaDialog {...newAkta} />
         }
       />
       <div className="mx-auto w-full max-w-[1100px] space-y-4 px-8 py-7">

@@ -1,25 +1,35 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
-import { FormError } from "@/components/ui/blocks";
-import { Input } from "@/components/ui/input";
+import { FormError, Textarea } from "@/components/ui/blocks";
+import { DialogActions, DialogButton, useCloseOnOk } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/input";
 import { correctEntry, type FormState } from "../actions";
 
-export function CorrectionForm({ entryId }: { entryId: string }) {
-  const [open, setOpen] = useState(false);
-  const [state, action, pending] = useActionState<FormState, FormData>(correctEntry, {});
-  if (state.ok) return <span className="text-[11.5px] text-success">{state.ok}</span>;
-  if (!open) return <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>Koreksi</Button>;
+export function CorrectionForm({ entryId, label }: { entryId: string; label?: string }) {
   return (
-    <form action={action} className="flex min-w-72 flex-col gap-1.5">
+    <DialogButton variant="ghost" buttonSize="sm" label="Koreksi" title="Catat koreksi repertorium" size="sm"
+      description={`${label ? `${label}. ` : ""}Entri lama tidak diubah; koreksi dicatat sebagai entri baru.`}>
+      <Form entryId={entryId} />
+    </DialogButton>
+  );
+}
+
+function Form({ entryId }: { entryId: string }) {
+  const [state, action, pending] = useActionState<FormState, FormData>(correctEntry, {});
+  useCloseOnOk(state);
+  return (
+    <form action={action} className="space-y-3">
       <input type="hidden" name="entryId" value={entryId} />
-      <Input name="note" placeholder="Apa yang dikoreksi dan mengapa" required autoFocus />
-      <div className="flex gap-1.5">
-        <Button size="sm" type="submit" variant="primary" disabled={pending}>Catat koreksi</Button>
-        <Button size="sm" type="button" variant="ghost" onClick={() => setOpen(false)}>Batal</Button>
+      <div>
+        <Label htmlFor="note">Apa yang dikoreksi dan mengapa</Label>
+        <Textarea id="note" name="note" required autoFocus />
       </div>
       <FormError message={state.error} />
+      <DialogActions>
+        <Button type="submit" variant="primary" disabled={pending}>{pending ? "Menyimpan…" : "Catat koreksi"}</Button>
+      </DialogActions>
     </form>
   );
 }

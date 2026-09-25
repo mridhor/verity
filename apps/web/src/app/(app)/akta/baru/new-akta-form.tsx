@@ -1,7 +1,9 @@
 "use client";
 
 import { useActionState } from "react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DialogActions, DialogButton } from "@/components/ui/dialog";
 import { FormError, Textarea } from "@/components/ui/blocks";
 import { Input, Label, Select } from "@/components/ui/input";
 import { AKTA_TYPES } from "@/lib/labels";
@@ -9,10 +11,25 @@ import { createAkta, type FormState } from "../actions";
 
 type Option = { id: string; label: string };
 
-export function NewAktaForm({ berkas, officials, defaultBerkas }: { berkas: Option[]; officials: Option[]; defaultBerkas?: string }) {
+export type NewAktaOptions = { berkas: Option[]; officials: Option[]; defaultBerkas?: string };
+
+/** "Akta baru" as a centered dialog (list page and berkas Akta tab). */
+export function NewAktaDialog(props: NewAktaOptions) {
+  const blocked = props.officials.length === 0
+    ? "Belum ada data pejabat (Notaris/PPAT). Super Admin perlu menambahkannya di halaman Pengguna."
+    : props.berkas.length === 0 ? "Belum ada berkas aktif. Buat berkas terlebih dahulu." : null;
+  return (
+    <DialogButton variant="ink" icon={<Plus size={14} />} label="Akta baru" title="Akta baru"
+      description="Draft tanpa nomor; nomor diberikan saat Notaris memfinalkan akta.">
+      {blocked ? <p className="text-[13px] text-muted-foreground">{blocked}</p> : <NewAktaForm {...props} inDialog />}
+    </DialogButton>
+  );
+}
+
+export function NewAktaForm({ berkas, officials, defaultBerkas, inDialog }: NewAktaOptions & { inDialog?: boolean }) {
   const [state, action, pending] = useActionState<FormState, FormData>(createAkta, {});
   return (
-    <form action={action} className="max-w-xl space-y-4 rounded-md border border-border bg-card p-5">
+    <form action={action} className="space-y-4">
       <div>
         <Label htmlFor="berkasId">Berkas</Label>
         <Select id="berkasId" name="berkasId" defaultValue={defaultBerkas ?? ""} required>
@@ -44,11 +61,19 @@ export function NewAktaForm({ berkas, officials, defaultBerkas }: { berkas: Opti
         <Label htmlFor="notes">Keterangan (opsional)</Label>
         <Textarea id="notes" name="notes" />
       </div>
-      <p className="text-[12px] text-subtle">
-        Akta dibuat sebagai draft tanpa nomor. Nomor diberikan otomatis saat Notaris memfinalkan akta dan tidak pernah dipakai ulang.
-      </p>
+      {!inDialog && (
+        <p className="text-[12px] text-subtle">
+          Akta dibuat sebagai draft tanpa nomor. Nomor diberikan otomatis saat Notaris memfinalkan akta dan tidak pernah dipakai ulang.
+        </p>
+      )}
       <FormError message={state.error} />
-      <Button type="submit" variant="ink" disabled={pending}>{pending ? "Menyimpan…" : "Buat draft akta"}</Button>
+      {inDialog ? (
+        <DialogActions>
+          <Button type="submit" variant="ink" disabled={pending}>{pending ? "Menyimpan…" : "Buat draft akta"}</Button>
+        </DialogActions>
+      ) : (
+        <Button type="submit" variant="ink" disabled={pending}>{pending ? "Menyimpan…" : "Buat draft akta"}</Button>
+      )}
     </form>
   );
 }

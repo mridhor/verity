@@ -1,5 +1,6 @@
 import "server-only";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 import { principalSchema } from "@verity/schema-ts";
 import { createClient } from "@/lib/supabase/server";
 import { MFA_REQUIRED, type AppRole } from "@/lib/roles";
@@ -16,7 +17,7 @@ export type Principal = {
  * Identity from the verified JWT only (JWT check 2, rule 5). getClaims() verifies the
  * signature against the project's JWKS; nothing is read from request headers.
  */
-export async function getPrincipal(): Promise<Principal | null> {
+export const getPrincipal = cache(async (): Promise<Principal | null> => {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
   if (error || !data) return null;
@@ -37,7 +38,7 @@ export async function getPrincipal(): Promise<Principal | null> {
     tenantId: p.tenant_id ?? undefined,
     role: p.app_role ?? undefined,
   };
-}
+});
 
 export type ActivePrincipal = Principal & { tenantId: string; role: AppRole };
 
@@ -55,8 +56,8 @@ export function needsMfa(p: Principal) {
 }
 
 /** Registers and protokol exist only for a notary office, not for a law firm. */
-export async function isNotaryOffice(tenantId: string) {
+export const isNotaryOffice = cache(async (tenantId: string) => {
   const supabase = await createClient();
   const { data } = await supabase.from("tenants").select("kind").eq("id", tenantId).maybeSingle();
   return data?.kind === "kantor_notaris";
-}
+});

@@ -1,17 +1,30 @@
 "use client";
 
 import { useActionState } from "react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FormError } from "@/components/ui/blocks";
+import { DialogActions, DialogButton, useCloseOnOk } from "@/components/ui/dialog";
 import { Input, Label, Select } from "@/components/ui/input";
 import { upsertOfficial, type FormState } from "./actions";
 
 export function OfficialForm({ notaries }: { notaries: { id: string; name: string }[] }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(upsertOfficial, {});
   if (notaries.length === 0) {
     return <p className="text-[12.5px] text-subtle">Tambahkan pengguna berperan Notaris/PPAT terlebih dahulu.</p>;
   }
   return (
-    <form action={action} className="grid grid-cols-2 gap-3 md:grid-cols-5">
+    <DialogButton icon={<Plus size={14} />} label="Tambah / ubah pejabat" title="Data pejabat"
+      description="Satu baris per pengangkatan. Orang yang sama bisa punya pengangkatan Notaris dan PPAT.">
+      <Form notaries={notaries} />
+    </DialogButton>
+  );
+}
+
+function Form({ notaries }: { notaries: { id: string; name: string }[] }) {
+  const [state, action, pending] = useActionState<FormState, FormData>(upsertOfficial, {});
+  useCloseOnOk(state);
+  return (
+    <form action={action} className="grid grid-cols-2 gap-3">
       <div>
         <Label htmlFor="o-user">Notaris</Label>
         <Select id="o-user" name="userId" defaultValue={notaries[0]!.id}>
@@ -25,23 +38,23 @@ export function OfficialForm({ notaries }: { notaries: { id: string; name: strin
           <option value="ppat">PPAT</option>
         </Select>
       </div>
-      <div className="md:col-span-3">
+      <div className="col-span-2">
         <Label htmlFor="o-name">Nama lengkap dengan gelar</Label>
         <Input id="o-name" name="displayName" placeholder="Sari Rahayu, S.H., M.Kn." required />
       </div>
-      <div className="md:col-span-3">
+      <div className="col-span-2">
         <Label htmlFor="o-ked">Tempat kedudukan / daerah kerja</Label>
         <Input id="o-ked" name="kedudukan" placeholder="Kota Administrasi Jakarta Selatan" />
       </div>
-      <div className="md:col-span-2">
+      <div className="col-span-2">
         <Label htmlFor="o-sk">Nomor SK pengangkatan</Label>
         <Input id="o-sk" name="skRef" />
       </div>
-      <div className="col-span-2 flex items-center gap-3 md:col-span-5">
-        <Button type="submit" variant="ink" disabled={pending}>Simpan pejabat</Button>
-        {(state.error || state.ok) && (
-          <span role="status" className={`text-[12.5px] ${state.error ? "text-destructive" : "text-success"}`}>{state.error ?? state.ok}</span>
-        )}
+      <div className="col-span-full">
+        <FormError message={state.error} />
+        <DialogActions>
+          <Button type="submit" variant="ink" disabled={pending}>{pending ? "Menyimpan…" : "Simpan pejabat"}</Button>
+        </DialogActions>
       </div>
     </form>
   );

@@ -75,9 +75,11 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   const thread = threads[key] ?? EMPTY_THREAD;
   const setOpen = useCallback((v: boolean) => openStore.set(v), []);
 
-  // Load the stored thread for this context once.
+  // Load the stored thread for this context once, and only when a conversation is on screen
+  // (sidecar open or the berkas Percakapan tab), so plain navigation costs no extra request.
+  const visible = open || embedded;
   useEffect(() => {
-    if (threads[key]?.loaded) return;
+    if (!visible || threads[key]?.loaded) return;
     let cancelled = false;
     loadThread(context).then((t) => {
       if (!cancelled) setThreads((s) => (s[key]?.loaded ? s : { ...s, [key]: { ...t, loaded: true } }));
@@ -86,7 +88,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by context key
-  }, [key]);
+  }, [key, visible]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DialogActions, DialogButton, useCloseDialog } from "@/components/ui/dialog";
 import { FormError } from "@/components/ui/blocks";
 import { Input, Label, Select } from "@/components/ui/input";
 import { DOCUMENT_TYPES, DOCUMENT_TYPE_LABEL } from "@/lib/labels";
@@ -19,18 +20,23 @@ type Option = { id: string; label: string };
  * Uploads straight to Supabase Storage with the user's own session (storage RLS checks the
  * berkas), then records the document. The service never sees a secret key.
  */
-export function UploadForm({ tenantId, berkas, akta = [], fixedBerkas }: {
-  tenantId: string; berkas: Option[]; akta?: (Option & { berkasId: string })[]; fixedBerkas?: string;
-}) {
+type Props = { tenantId: string; berkas: Option[]; akta?: (Option & { berkasId: string })[]; fixedBerkas?: string };
+
+export function UploadForm(props: Props) {
+  return (
+    <DialogButton variant="ink" icon={<Upload size={14} />} label="Unggah dokumen" title="Unggah dokumen" size="lg"
+      description="File disimpan privat; setiap unduhan tercatat di audit.">
+      <UploadBody {...props} />
+    </DialogButton>
+  );
+}
+
+function UploadBody({ tenantId, berkas, akta = [], fixedBerkas }: Props) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const close = useCloseDialog();
   const [berkasId, setBerkasId] = useState(fixedBerkas ?? "");
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
-
-  if (!open) {
-    return <Button variant="ink" onClick={() => setOpen(true)}><Upload size={14} /> Unggah dokumen</Button>;
-  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -56,13 +62,13 @@ export function UploadForm({ tenantId, berkas, akta = [], fixedBerkas }: {
     });
     setBusy(false);
     if (res.error) return setError(res.error);
-    setOpen(false);
+    close();
     router.refresh();
   }
 
   const aktaOptions = akta.filter((a) => a.berkasId === berkasId);
   return (
-    <form onSubmit={onSubmit} className="grid w-full grid-cols-2 gap-3 rounded-md border border-border bg-card p-4 md:grid-cols-4">
+    <form onSubmit={onSubmit} className="grid grid-cols-2 gap-3">
       {!fixedBerkas && (
         <div className="col-span-2">
           <Label htmlFor="berkas">Berkas</Label>
@@ -93,10 +99,11 @@ export function UploadForm({ tenantId, berkas, akta = [], fixedBerkas }: {
         <Label htmlFor="file">File (maks. 25 MB)</Label>
         <input id="file" name="file" type="file" accept={ACCEPT} required className="block w-full text-[13px] file:mr-3 file:rounded-md file:border file:border-border file:bg-card file:px-3 file:py-1.5 file:text-[12.5px]" />
       </div>
-      <div className="col-span-2 flex items-center gap-2 md:col-span-4">
-        <Button type="submit" variant="ink" disabled={busy}>{busy ? "Mengunggah…" : "Unggah"}</Button>
-        <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Tutup</Button>
+      <div className="col-span-full">
         <FormError message={error} />
+        <DialogActions>
+          <Button type="submit" variant="ink" disabled={busy}>{busy ? "Mengunggah…" : "Unggah"}</Button>
+        </DialogActions>
       </div>
     </form>
   );

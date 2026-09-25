@@ -75,7 +75,7 @@ export default async function RepertoriumPage({ searchParams }: { searchParams: 
                   ))}
                 </td>
                 <td className={`${td} text-muted-foreground`}>{r.parties_summary}</td>
-                <td className={`${td} text-right`}>{me.role === "notaris" && <CorrectionForm entryId={r.id} />}</td>
+                <td className={`${td} text-right`}>{me.role === "notaris" && <CorrectionForm entryId={r.id} label={`Entri ${r.entry_no ?? ""}`.trim()} />}</td>
               </tr>
             ))}
           </Table>

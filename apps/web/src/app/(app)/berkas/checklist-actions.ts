@@ -6,7 +6,7 @@ import { requirePrincipal } from "@/lib/auth";
 import { dbMessage } from "@/lib/db-errors";
 import { createClient } from "@/lib/supabase/server";
 
-export type FormState = { error?: string };
+export type FormState = { error?: string; ok?: string };
 
 const schema = z.object({
   berkasId: z.uuid(),

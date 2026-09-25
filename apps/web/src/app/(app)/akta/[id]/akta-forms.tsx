@@ -1,7 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DialogActions, DialogButton, useCloseDialog, useCloseOnOk } from "@/components/ui/dialog";
 import { FormError, Textarea } from "@/components/ui/blocks";
 import { Input, Label, Select } from "@/components/ui/input";
 import { COMPANY_FORMS, PARTY_ROLES, PARTY_ROLE_LABEL } from "@/lib/labels";
@@ -28,34 +30,53 @@ export function TransitionButton({ aktaId, to, label, variant = "default", disab
 }
 
 export function FinalizeForm({ aktaId, today, disabledReason }: { aktaId: string; today: string; disabledReason?: string }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(finalizeAkta, {});
   return (
-    <form action={action} className="space-y-3 rounded-md border border-primary/40 bg-primary-soft/40 p-4">
+    <div className="space-y-1">
+      <DialogButton variant="primary" label="Finalkan dan beri nomor" title="Finalkan akta" disabled={!!disabledReason}>
+        <FinalizeBody aktaId={aktaId} today={today} />
+      </DialogButton>
+      {disabledReason && <p className="text-[11.5px] text-subtle">{disabledReason}</p>}
+    </div>
+  );
+}
+
+function FinalizeBody({ aktaId, today }: { aktaId: string; today: string }) {
+  const [state, action, pending] = useActionState<FormState, FormData>(finalizeAkta, {});
+  useCloseOnOk(state);
+  return (
+    <form action={action} className="space-y-3">
       <input type="hidden" name="aktaId" value={aktaId} />
-      <div className="text-[13.5px] font-semibold">Finalkan dan beri nomor</div>
       <p className="text-[12.5px] text-muted-foreground">
         Nomor akta diberikan sekarang, berurutan, dan tidak dapat diubah atau dipakai ulang. Repertorium dan buku klapper
         terisi otomatis. Lakukan setelah akta ditandatangani.
       </p>
       <div className="max-w-48">
         <Label htmlFor="aktaDate">Tanggal akta</Label>
-        <Input id="aktaDate" name="aktaDate" type="date" defaultValue={today} max={today} required disabled={!!disabledReason} />
+        <Input id="aktaDate" name="aktaDate" type="date" defaultValue={today} max={today} required />
       </div>
       <label className="flex items-start gap-2 text-[12.5px]">
-        <input type="checkbox" name="confirm" className="mt-0.5 accent-[var(--primary)]" disabled={!!disabledReason} />
+        <input type="checkbox" name="confirm" className="mt-0.5 accent-[var(--primary)]" />
         Saya memastikan akta ini sudah ditandatangani dan datanya benar.
       </label>
       <FormError message={state.error} />
-      <Button type="submit" variant="primary" disabled={pending || !!disabledReason} title={disabledReason}>
-        {pending ? "Memfinalkan…" : "Finalkan akta"}
-      </Button>
-      {disabledReason && <p className="text-[11.5px] text-subtle">{disabledReason}</p>}
+      <DialogActions>
+        <Button type="submit" variant="primary" disabled={pending}>{pending ? "Memfinalkan…" : "Finalkan akta"}</Button>
+      </DialogActions>
     </form>
   );
 }
 
-export function EditAktaForm({ aktaId, title, notes }: { aktaId: string; title: string; notes: string | null }) {
+export function EditAktaForm(props: { aktaId: string; title: string; notes: string | null }) {
+  return (
+    <DialogButton buttonSize="sm" icon={<Pencil size={13} />} label="Ubah" title="Ubah informasi akta">
+      <EditBody {...props} />
+    </DialogButton>
+  );
+}
+
+function EditBody({ aktaId, title, notes }: { aktaId: string; title: string; notes: string | null }) {
   const [state, action, pending] = useActionState<FormState, FormData>(updateAkta, {});
+  useCloseOnOk(state);
   return (
     <form action={action} className="space-y-3">
       <input type="hidden" name="aktaId" value={aktaId} />
@@ -68,8 +89,9 @@ export function EditAktaForm({ aktaId, title, notes }: { aktaId: string; title: 
         <Textarea id="notes" name="notes" defaultValue={notes ?? ""} />
       </div>
       <FormError message={state.error} />
-      {state.ok && <p className="text-[12.5px] text-success">{state.ok}</p>}
-      <Button type="submit" disabled={pending}>{pending ? "Menyimpan…" : "Simpan"}</Button>
+      <DialogActions>
+        <Button type="submit" variant="ink" disabled={pending}>{pending ? "Menyimpan…" : "Simpan"}</Button>
+      </DialogActions>
     </form>
   );
 }
@@ -84,11 +106,22 @@ function RoleSelect({ id }: { id: string }) {
   );
 }
 
-export function AddPartyForms({ aktaId, subjects }: { aktaId: string; subjects: Subject[] }) {
+export function AddPartyForms(props: { aktaId: string; subjects: Subject[] }) {
+  return (
+    <DialogButton variant="ink" icon={<Plus size={14} />} label="Tambah pihak" title="Tambah pihak akta" size="lg"
+      description="Pilih orang atau badan usaha yang sudah ada, atau buat data baru.">
+      <PartyBody {...props} />
+    </DialogButton>
+  );
+}
+
+function PartyBody({ aktaId, subjects }: { aktaId: string; subjects: Subject[] }) {
   const [tab, setTab] = useState<"existing" | "person" | "company">(subjects.length ? "existing" : "person");
   const [existing, existingAction, p1] = useActionState<FormState, FormData>(addExistingParty, {});
   const [person, personAction, p2] = useActionState<FormState, FormData>(addNewPerson, {});
   const [company, companyAction, p3] = useActionState<FormState, FormData>(addNewCompany, {});
+  const close = useCloseDialog();
+  useEffect(() => { if (existing.ok || person.ok || company.ok) close(); }, [existing, person, company, close]);
   const tabs = [
     ["existing", "Dari data yang ada"],
     ["person", "Orang baru"],
@@ -126,7 +159,7 @@ export function AddPartyForms({ aktaId, subjects }: { aktaId: string; subjects: 
             <Label htmlFor="role-existing">Kedudukan</Label>
             <RoleSelect id="role-existing" />
           </div>
-          <Button type="submit" disabled={p1}>Tambahkan</Button>
+          <Button type="submit" variant="ink" disabled={p1}>Tambahkan</Button>
           <div className="col-span-3"><FormError message={existing.error} /></div>
         </form>
       )}
@@ -164,7 +197,7 @@ export function AddPartyForms({ aktaId, subjects }: { aktaId: string; subjects: 
           </div>
           <div className="col-span-2 space-y-2">
             <FormError message={person.error} />
-            <Button type="submit" disabled={p2}>Simpan dan tambahkan</Button>
+            <Button type="submit" variant="ink" disabled={p2}>Simpan dan tambahkan</Button>
           </div>
         </form>
       )}
@@ -200,7 +233,7 @@ export function AddPartyForms({ aktaId, subjects }: { aktaId: string; subjects: 
           </div>
           <div className="col-span-2 space-y-2">
             <FormError message={company.error} />
-            <Button type="submit" disabled={p3}>Simpan dan tambahkan</Button>
+            <Button type="submit" variant="ink" disabled={p3}>Simpan dan tambahkan</Button>
           </div>
         </form>
       )}

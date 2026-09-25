@@ -9,13 +9,14 @@ import { createClient } from "@/lib/supabase/server";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const me = await requirePrincipal();
   const supabase = await createClient();
-  const [{ data: berkas }, { data: tenants }, { data: self }, { data: notes }, { count: unread }] = await Promise.all([
+  // One parallel round trip for the shell; the unread count comes from the same list.
+  const [{ data: berkas }, { data: tenants }, { data: self }, { data: notes }] = await Promise.all([
     supabase.from("berkas").select("id, title, status").eq("status", "aktif").order("updated_at", { ascending: false }).limit(8),
     supabase.from("tenants").select("id, name, kind").order("name"),
     supabase.from("tenant_members").select("display_name").eq("user_id", me.userId).eq("tenant_id", me.tenantId).maybeSingle(),
-    supabase.from("notifications").select("id, kind, created_at, read_at").order("created_at", { ascending: false }).limit(8),
-    supabase.from("notifications").select("id", { count: "exact", head: true }).is("read_at", null),
+    supabase.from("notifications").select("id, kind, payload, created_at, read_at").order("created_at", { ascending: false }).limit(20),
   ]);
+  const unread = (notes ?? []).filter((n) => !n.read_at).length;
   const tenantKind = (tenants ?? []).find((t) => t.id === me.tenantId)?.kind ?? "kantor_notaris";
 
   return (
@@ -28,7 +29,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         tenants={tenants ?? []}
       />
       <main className="flex min-w-0 flex-1 flex-col overflow-y-auto">
-        <Topbar notifications={notes ?? []} unread={unread ?? 0} />
+        <Topbar notifications={notes ?? []} unread={unread} />
         {children}
       </main>
       <AgentSidecar />

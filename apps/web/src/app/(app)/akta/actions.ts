@@ -86,7 +86,7 @@ export async function finalizeAkta(_: FormState, form: FormData): Promise<FormSt
   revalidatePath("/akta");
   revalidatePath("/register/repertorium");
   revalidatePath("/register/klapper");
-  return {};
+  return { ok: "Akta difinalkan." };
 }
 
 export async function deleteDraft(form: FormData): Promise<void> {

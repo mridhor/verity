@@ -64,3 +64,12 @@
 }
 @keyframes stamp-in { from { transform: rotate(-9deg) scale(1.6); opacity: 0 } to { transform: rotate(-9deg) scale(1); opacity: .9 } }
 @keyframes agent-pulse { 50% { opacity: .4 } }
+
+/* Centered dialogs (components/ui/dialog.tsx) */
+dialog.dialog-pop[open] { animation: dialog-in 140ms ease-out; }
+dialog.dialog-pop[open]::backdrop { animation: backdrop-in 140ms ease-out; }
+@keyframes dialog-in { from { opacity: 0; transform: translateY(6px) scale(0.985); } to { opacity: 1; transform: none; } }
+@keyframes backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  dialog.dialog-pop[open], dialog.dialog-pop[open]::backdrop { animation: none; }
+}

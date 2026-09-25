@@ -4,7 +4,7 @@ import { Check } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { AKTA_STATUS_TONE, Badge } from "@/components/ui/badge";
 import { Section } from "@/components/ui/blocks";
-import { Button } from "@/components/ui/button";
+import { ConfirmAction } from "@/components/ui/dialog";
 import { requirePrincipal } from "@/lib/auth";
 import { jakartaToday } from "@/lib/jakarta-time";
 import {
@@ -117,18 +117,16 @@ export default async function AktaDetailPage({ params }: { params: Promise<{ id:
                       </div>
                     </div>
                     {editable && (
-                      <form action={removeParty}>
-                        <input type="hidden" name="partyId" value={p.id} />
-                        <input type="hidden" name="aktaId" value={akta.id} />
-                        <Button size="sm" variant="ghost">Hapus</Button>
-                      </form>
+                      <ConfirmAction label="Hapus" variant="ghost" buttonSize="sm" title="Hapus pihak dari akta?"
+                        description={`${p.persons?.full_name ?? `${p.companies?.legal_form} ${p.companies?.name}`} dikeluarkan dari akta ini. Data orang/badan usaha tetap tersimpan.`}
+                        confirmLabel="Hapus pihak" action={removeParty} fields={{ partyId: p.id, aktaId: akta.id }} />
                     )}
                   </li>
                 ))}
               </ul>
             )}
             {editable ? (
-              <div className="mt-4 border-t border-border-soft pt-4">
+              <div className="mt-4">
                 <AddPartyForms
                   aktaId={akta.id}
                   subjects={[
@@ -144,13 +142,10 @@ export default async function AktaDetailPage({ params }: { params: Promise<{ id:
             )}
           </Section>
 
-          {editable && (
-            <Section title="Informasi akta">
-              <EditAktaForm aktaId={akta.id} title={akta.title} notes={akta.notes} />
+          {(editable || akta.notes) && (
+            <Section title="Keterangan" actions={editable ? <EditAktaForm aktaId={akta.id} title={akta.title} notes={akta.notes} /> : undefined}>
+              <p className="text-[13px] whitespace-pre-line">{akta.notes || <span className="text-subtle">Belum ada keterangan.</span>}</p>
             </Section>
-          )}
-          {!editable && akta.notes && (
-            <Section title="Keterangan"><p className="text-[13px] whitespace-pre-line">{akta.notes}</p></Section>
           )}
 
           <Section title="Dokumen terkait">
@@ -179,10 +174,9 @@ export default async function AktaDetailPage({ params }: { params: Promise<{ id:
                 <>
                   <TransitionButton aktaId={akta.id} to="verifikasi" label="Ajukan verifikasi" variant="ink" />
                   {(akta.created_by === me.userId || isNotaris) && (
-                    <form action={deleteDraft}>
-                      <input type="hidden" name="aktaId" value={akta.id} />
-                      <Button variant="danger" size="sm">Hapus draft</Button>
-                    </form>
+                    <ConfirmAction label="Hapus draft" buttonSize="sm" title="Hapus draft akta?"
+                      description="Draft ini belum bernomor dan akan dihapus beserta daftar pihaknya. Tindakan ini tidak dapat dibatalkan."
+                      confirmLabel="Hapus draft" action={deleteDraft} fields={{ aktaId: akta.id }} />
                   )}
                 </>
               )}

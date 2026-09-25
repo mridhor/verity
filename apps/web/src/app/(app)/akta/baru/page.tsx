@@ -26,13 +26,13 @@ export default async function NewAktaPage({ searchParams }: { searchParams: Prom
         ) : (berkas ?? []).length === 0 ? (
           <p className="max-w-xl rounded-md bg-border-soft px-4 py-3 text-[13px]">Belum ada berkas aktif. Buat berkas terlebih dahulu.</p>
         ) : (
-          <NewAktaForm
+          <div className="max-w-xl rounded-md border border-border bg-card p-5"><NewAktaForm
             defaultBerkas={defaultBerkas}
             berkas={(berkas ?? []).map((b) => ({ id: b.id, label: b.title }))}
             officials={(officials ?? []).map((o) => ({
               id: o.id, label: `${APPOINTMENT_LABEL[o.appointment as "notaris" | "ppat"]} — ${o.display_name}`,
             }))}
-          />
+          /></div>
         )}
       </div>
     </>

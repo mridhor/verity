@@ -21,6 +21,8 @@ import { cn, formatDate, formatDateTime } from "@/lib/utils";
 import { setBerkasMember } from "../actions";
 import { deleteChecklistItem, toggleChecklistItem } from "../checklist-actions";
 import { ChecklistForm } from "./checklist-form";
+import { NewAktaDialog } from "../../akta/baru/new-akta-form";
+import { newAktaOptions } from "../../akta/baru/options";
 
 const TABS = [
   { id: "percakapan", label: "Percakapan" },
@@ -138,9 +140,7 @@ export default async function BerkasPage({
         {tab === "akta" && (
           <div className="space-y-4">
             {me.role !== "super_admin" && (
-              <Link href={`/akta/baru?berkas=${id}`} className="inline-flex h-8 items-center rounded-md bg-foreground px-3 text-[13px] font-medium text-card hover:bg-foreground/90">
-                Akta baru untuk berkas ini
-              </Link>
+              <NewAktaDialog {...(await newAktaOptions(id))} />
             )}
             {(akta ?? []).length === 0 ? <EmptyState>Belum ada akta di berkas ini.</EmptyState> : (
               <Table head={["Nomor", "Jenis", "Judul", "Pejabat", "Status"]}>
