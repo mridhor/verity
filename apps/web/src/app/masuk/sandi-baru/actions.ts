@@ -26,6 +26,13 @@ export async function setNewPassword(_: NewPasswordState, form: FormData): Promi
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) return { error: ERRORS[error.code ?? ""] ?? "Kata sandi gagal diperbarui. Coba lagi." };
 
+  // First password of an account made by the Super Admin: clear the flag, then refresh the token
+  // so the proxy stops sending the user here.
+  if ((data.claims.app_metadata as { must_change_password?: boolean } | undefined)?.must_change_password) {
+    await supabase.rpc("clear_must_change_password");
+    await supabase.auth.refreshSession();
+  }
+  await supabase.rpc("log_auth_event", { p_kind: "auth.password_changed" });
   // Anyone still signed in elsewhere with the old password is logged out.
   await supabase.auth.signOut({ scope: "others" });
   redirect("/beranda");

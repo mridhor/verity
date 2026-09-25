@@ -10,10 +10,10 @@ export function ResultTable({ columns, rows, cites }: {
   columns: string[]; rows: { cells: string[]; tone?: "ok" | "warn" | "bad" }[]; cites: Map<string, CitationTarget>;
 }) {
   return (
-    <div className="my-3 overflow-x-auto rounded-md border border-border bg-card">
+    <div className="my-3 overflow-x-auto rounded-xl border border-border bg-card">
       <table className="w-full border-collapse text-[12.5px]">
         <thead>
-          <tr className="bg-background text-left text-muted-foreground">
+          <tr className="bg-muted text-left text-muted-foreground">
             {columns.map((c) => <th key={c} className="border-b border-border px-3 py-2 font-medium whitespace-nowrap">{c}</th>)}
           </tr>
         </thead>

@@ -1,4 +1,5 @@
-import { Star } from "lucide-react";
+import Link from "next/link";
+import { FileText, Star } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState, FilterChips, SearchForm } from "@/components/ui/blocks";
@@ -14,6 +15,7 @@ import { AgentPageContext } from "@/components/agent/agent-provider";
 type Ref = {
   id: string; category: LegalCategory; number_label: string; title: string; year: number | null;
   status: "berlaku" | "diubah" | "dicabut"; source_url: string | null; verified_by: string | null; verified_at: string | null;
+  file_path: string | null;
 };
 
 export default async function DasarHukumPage({ searchParams }: { searchParams: Promise<{ kategori?: string; q?: string }> }) {
@@ -21,7 +23,7 @@ export default async function DasarHukumPage({ searchParams }: { searchParams: P
   const { kategori, q } = await searchParams;
   const supabase = await createClient();
   let query = supabase.from("legal_references")
-    .select("id, category, number_label, title, year, status, source_url, verified_by, verified_at")
+    .select("id, category, number_label, title, year, status, source_url, verified_by, verified_at, file_path")
     .order("year", { ascending: false, nullsFirst: false }).limit(500);
   if (kategori && (LEGAL_CATEGORIES as readonly string[]).includes(kategori)) query = query.eq("category", kategori);
   if (q) { const s = q.replace(/[%,()]/g, " "); query = query.or(`title.ilike.%${s}%,number_label.ilike.%${s}%`); }
@@ -36,19 +38,21 @@ export default async function DasarHukumPage({ searchParams }: { searchParams: P
   const canWrite = me.role !== "super_admin";
 
   const Item = ({ r }: { r: Ref }) => (
-    <li className="flex items-start gap-3 rounded-md border border-border bg-card px-4 py-3">
+    <li className="flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3.5 transition-[box-shadow,border-color] hover:border-[#d9d6ce] hover:shadow-surface">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge tone="info">{LEGAL_CATEGORY_LABEL[r.category]}</Badge>
+          <Badge dot={false} tone="neutral">{LEGAL_CATEGORY_LABEL[r.category]}</Badge>
           <span className="text-[12px] font-medium tabular-nums text-muted-foreground">{r.number_label}{r.year ? ` · ${r.year}` : ""}</span>
           {r.status !== "berlaku" && <Badge tone="danger">{LEGAL_STATUS_LABEL[r.status]}</Badge>}
         </div>
-        <div className="mt-1 text-[13.5px] font-medium">{r.title}</div>
+        <Link href={`/dasar-hukum/${r.id}`} className="mt-1.5 block text-[14px] leading-snug font-medium hover:underline">{r.title}</Link>
         <div className="mt-1 flex flex-wrap items-center gap-3 text-[11.5px] text-subtle">
           {r.verified_by
             ? <span className="text-success">Terverifikasi oleh {nameOf.get(r.verified_by) ?? "Notaris"}{r.verified_at ? `, ${formatDate(r.verified_at)}` : ""}</span>
             : <span>Belum terverifikasi</span>}
-          {r.source_url && <a href={r.source_url} target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:underline">Buka sumber resmi</a>}
+          <Link href={`/dasar-hukum/${r.id}`} className="font-medium text-muted-foreground underline-offset-2 hover:underline">Buka</Link>
+          {r.file_path && <a href={`/dasar-hukum/${r.id}/unduh`} className="inline-flex items-center gap-1 underline-offset-2 hover:underline"><FileText size={11} /> Unduh PDF</a>}
+          {r.source_url && <a href={r.source_url} target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:underline">Sumber resmi</a>}
           {!r.verified_by && me.role === "notaris" && (
             <form action={verifyReference}>
               <input type="hidden" name="id" value={r.id} />
@@ -73,7 +77,7 @@ export default async function DasarHukumPage({ searchParams }: { searchParams: P
       <AgentPageContext context={{ kind: "kantor", label: "Dasar hukum", page: "dasar_hukum" }} suggestions={["dasar hukum fidusia", "dasar hukum jabatan notaris", "dasar hukum perseroan terbatas"]} />
       <PageHeader eyebrow="Referensi" title="Portal dasar hukum"
         meta={<span>Referensi peraturan dan putusan untuk kenotariatan. Setiap entri perlu diverifikasi Notaris sebelum diandalkan.</span>} />
-      <div className="mx-auto w-full max-w-[1000px] space-y-5 px-8 py-7">
+      <div className="w-full max-w-[1000px] space-y-5 px-8 pt-5 pb-10">
         {canWrite && <ReferenceForm />}
         <div className="flex flex-wrap items-center gap-3">
           <SearchForm action="/dasar-hukum" value={q} placeholder="Cari judul atau nomor peraturan" hidden={{ kategori }} />

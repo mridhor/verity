@@ -1,31 +1,40 @@
-/* Design tokens from docs/design/berkas-workspace.jsx (TRD §8).
-   Violet is reserved for authoritative elements: citations, approvals, the active step. */
+/* Design tokens (TRD §8, docs/design/berkas-workspace.jsx), refined toward the quiet, warm legal
+   workspace of harvey.ai (ADR 0004): stone canvas, white work surface, ink text, serif titles.
+   Violet is reserved for authoritative elements: citations, approvals, stamps, the active step. */
 :root {
-  --background: #f5f5f0;        /* legal paper canvas */
-  --foreground: #1a1a18;        /* ink */
-  --card: #ffffff;
-  --card-foreground: #1a1a18;
+  --background: #f4f3ef;        /* stone canvas around the work surface */
+  --foreground: #0f0e0d;        /* ink */
+  --card: #ffffff;              /* work surface, cards */
+  --card-foreground: #0f0e0d;
   --popover: #ffffff;
-  --popover-foreground: #1a1a18;
-  --muted: #edece6;
-  --muted-foreground: #5c5b55;  /* ink2 */
-  --subtle-foreground: #8f8d85; /* ink3 */
-  --border: #e3e2db;            /* line */
-  --border-soft: #edece6;       /* line2 */
-  --input: #e3e2db;
-  --pane: #efeee8;              /* document pane */
+  --popover-foreground: #0f0e0d;
+  --muted: #f3f2ee;             /* soft fill: stat cards, table header, selected tab */
+  --muted-foreground: #5f5c55;  /* ink2 */
+  --subtle-foreground: #8e8b83; /* ink3 */
+  --border: #e6e4de;            /* line */
+  --border-soft: #efede8;       /* line2 */
+  --input: #e2e0d9;
+  --pane: #f4f3ef;              /* document pane */
   --primary: #4a3e96;           /* notary stamp violet */
   --primary-hover: #3b3180;
   --primary-foreground: #ffffff;
   --primary-soft: #eceaf6;
   --secondary: #ffffff;
-  --secondary-foreground: #1a1a18;
-  --accent: #edece6;
-  --accent-foreground: #1a1a18;
-  --success: #2f7a4f;
-  --warning: #a86b12;
+  --secondary-foreground: #0f0e0d;
+  --accent: #efede8;
+  --accent-foreground: #0f0e0d;
+  --success: #2c7048;
+  --success-soft: #e6f1e9;
+  --warning: #9a5b0b;
+  --warning-soft: #f8edd3;
+  --info: #2556c4;              /* "siap diperiksa" status, not authority */
+  --info-soft: #e9effb;
   --destructive: #b23a2e;
+  --destructive-soft: #f8e5e2;
   --highlight: #f6eda6;         /* highlighter for cited anchors */
   --ring: #4a3e96;
-  --radius: 6px;
+  --radius: 8px;
+  --elev-card: 0 1px 2px rgba(15, 14, 13, 0.04);
+  --elev-surface: 0 1px 3px rgba(15, 14, 13, 0.05), 0 0 0 1px rgba(15, 14, 13, 0.03);
+  --elev-pop: 0 24px 64px -24px rgba(15, 14, 13, 0.32), 0 2px 6px rgba(15, 14, 13, 0.05);
 }

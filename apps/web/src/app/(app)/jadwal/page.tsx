@@ -40,7 +40,7 @@ export default async function JadwalPage({ searchParams }: { searchParams: Promi
     <>
       <AgentPageContext context={{ kind: "kantor", label: "Jadwal kantor", page: "jadwal" }} suggestions={["jadwal hari ini", "jadwal besok", "jadwal minggu ini", "tenggat minggu ini"]} />
       <PageHeader eyebrow="Agenda operasional kantor" title="Jadwal" />
-      <div className="mx-auto w-full max-w-[900px] space-y-5 px-8 py-7">
+      <div className="w-full max-w-[900px] space-y-5 px-8 pt-5 pb-10">
         <ScheduleForm today={today} berkas={berkas ?? []} />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <FilterChips base="/jadwal" param="jenis" value={jenis} extra={{ lalu }}

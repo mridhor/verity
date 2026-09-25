@@ -49,3 +49,13 @@ export async function verifyReference(form: FormData): Promise<void> {
   if (error) throw new Error(dbMessage(error, "Verifikasi gagal."));
   revalidatePath("/dasar-hukum");
 }
+
+export async function attachLegalFile(referenceId: string, path: string): Promise<{ error?: string }> {
+  await requirePrincipal();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("attach_legal_file", { p_reference: referenceId, p_path: path });
+  if (error) return { error: error.code === "42501" ? "Peran Anda tidak dapat melampirkan file." : "File gagal dilampirkan." };
+  revalidatePath(`/dasar-hukum/${referenceId}`);
+  revalidatePath("/dasar-hukum");
+  return {};
+}

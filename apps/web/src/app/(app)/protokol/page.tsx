@@ -28,7 +28,7 @@ export default async function ProtokolPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHeader eyebrow="Register" title="Transfer protokol notaris" meta={<span>Arsip yang diterima dari notaris lain yang pensiun, pindah, atau berhalangan tetap.</span>} />
-      <div className="mx-auto w-full max-w-[1000px] space-y-5 px-8 py-7">
+      <div className="w-full max-w-[1000px] space-y-5 px-8 pt-5 pb-10">
         <div className="grid grid-cols-3 gap-3">
           <StatCard label="Serah terima tercatat" value={all.length} />
           <StatCard label="Total akta protokol" value={all.reduce((a, p) => a + p.akta_count, 0).toLocaleString("id-ID")} />

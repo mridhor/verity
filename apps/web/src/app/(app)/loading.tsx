@@ -7,7 +7,7 @@ export default function Loading() {
         <div className="h-7 w-72 rounded bg-border-soft" />
         <div className="mt-3 h-3 w-96 max-w-full rounded bg-border-soft" />
       </div>
-      <div className="mx-auto w-full max-w-[1040px] space-y-4 px-8 py-7">
+      <div className="w-full max-w-[1040px] space-y-4 px-8 py-7">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => <div key={i} className="h-[78px] rounded-md border border-border bg-card" />)}
         </div>

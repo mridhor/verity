@@ -96,7 +96,7 @@ export default async function AktaDetailPage({ params }: { params: Promise<{ id:
         </ol>
       </PageHeader>
 
-      <div className="mx-auto grid w-full max-w-[1100px] gap-5 px-8 py-7 lg:grid-cols-[1fr_320px]">
+      <div className="grid w-full max-w-[1180px] gap-5 px-8 pt-6 pb-10 lg:grid-cols-[1fr_340px]">
         <div className="space-y-5">
           <Section title={`Pihak (${partyList.length})`}>
             {partyList.length === 0 ? (

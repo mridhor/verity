@@ -10,7 +10,7 @@ import { useAgent } from "./agent-provider";
 const PAGES: SearchHit[] = [
   ["Beranda", "/beranda"], ["Berkas", "/berkas"], ["Akta", "/akta"], ["Jadwal", "/jadwal"], ["Minuta & dokumen", "/dokumen"],
   ["Repertorium", "/register/repertorium"], ["Buku klapper", "/register/klapper"], ["Protokol notaris", "/protokol"],
-  ["Dasar hukum", "/dasar-hukum"], ["Keamanan", "/keamanan"],
+  ["Dasar hukum", "/dasar-hukum"], ["Keamanan", "/keamanan"], ["Pengguna", "/admin/pengguna"], ["Audit log", "/admin/audit"],
 ].map(([label, href]) => ({ group: "Lompat ke", label: label!, href: href! }));
 
 type Item = { kind: "ask"; label: string } | { kind: "hit"; hit: SearchHit };
@@ -120,10 +120,11 @@ export function PaletteTrigger() {
   const { setPaletteOpen } = useAgent();
   return (
     <button type="button" onClick={() => setPaletteOpen(true)}
-      className="flex w-full items-center gap-2 rounded-md border border-border bg-card px-2.5 py-[7px] text-left text-[12.5px] text-subtle hover:border-subtle">
-      <Search size={13} aria-hidden />
-      <span className="flex-1">Cari berkas, klien, akta</span>
-      <kbd className="rounded border border-border px-1 font-sans text-[10.5px]">⌘K</kbd>
+      title="Cari (⌘K)"
+      className="flex w-full items-center gap-2 rounded-lg bg-card px-2.5 py-[7px] text-left text-[12.5px] text-subtle shadow-surface transition-colors hover:text-muted-foreground group-data-[collapsed=true]/side:justify-center">
+      <Search size={14} aria-hidden className="shrink-0" />
+      <span className="flex-1 group-data-[collapsed=true]/side:sr-only">Cari berkas, klien, akta</span>
+      <kbd className="rounded border border-border px-1 font-sans text-[10.5px] group-data-[collapsed=true]/side:hidden">⌘K</kbd>
     </button>
   );
 }

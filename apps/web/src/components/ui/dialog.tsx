@@ -46,7 +46,7 @@ export function Dialog({ open, onClose, title, description, size = "md", childre
       aria-labelledby="dialog-title"
       onMouseDown={(e) => { if (e.target === ref.current) ref.current?.close(); }}
       className={cn(
-        "dialog-pop fixed inset-0 m-auto h-fit max-h-[88vh] overflow-hidden rounded-[10px] border border-border bg-card p-0 text-foreground",
+        "dialog-pop fixed inset-0 m-auto h-fit text-left max-h-[88vh] overflow-hidden rounded-[10px] border border-border bg-card p-0 text-foreground",
         "shadow-[0_24px_60px_-24px_rgba(40,36,20,.45)] backdrop:bg-foreground/25",
         WIDTH[size],
       )}

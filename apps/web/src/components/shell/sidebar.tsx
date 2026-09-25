@@ -7,6 +7,7 @@ import { PaletteTrigger } from "@/components/agent/command-palette";
 import { Dot } from "@/components/ui/input";
 import { ROLE_LABEL, type AppRole } from "@/lib/roles";
 import { NavLink } from "./nav-link";
+import { SidebarFrame } from "./sidebar-frame";
 import { TenantSwitcher } from "./tenant-switcher";
 
 type Props = {
@@ -18,8 +19,9 @@ type Props = {
 
 function Group({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="mt-4">
-      <div className="px-[18px] pb-1 text-[11px] uppercase tracking-[0.06em] text-subtle">{label}</div>
+    <div className="mt-5 group-data-[collapsed=true]/side:mt-3">
+      <div className="px-[18px] pb-1.5 text-[11px] font-medium tracking-[0.06em] text-subtle uppercase group-data-[collapsed=true]/side:hidden">{label}</div>
+      <div className="hidden group-data-[collapsed=true]/side:mx-4 group-data-[collapsed=true]/side:mb-2 group-data-[collapsed=true]/side:block group-data-[collapsed=true]/side:border-t group-data-[collapsed=true]/side:border-border" />
       {children}
     </div>
   );
@@ -33,11 +35,12 @@ export function Sidebar({ me, tenantKind, berkas, tenants }: Props) {
   const canSeeAudit = isAdmin || me.role === "notaris";
 
   return (
-    <nav aria-label="Navigasi utama" className="flex w-[248px] shrink-0 flex-col overflow-y-auto border-r border-border bg-background">
-      <Link href="/beranda" className="px-[18px] pt-[18px] pb-2 font-serif text-[19px] font-semibold">
-        Verity
+    <SidebarFrame>
+      <Link href="/beranda" className="flex items-center gap-2.5 px-4 pt-4 pb-3 group-data-[collapsed=true]/side:justify-center group-data-[collapsed=true]/side:px-0">
+        <span className="grid size-7 shrink-0 place-items-center rounded-md bg-foreground font-serif text-[17px] leading-none text-card">V</span>
+        <span className="font-serif text-[20px] leading-none tracking-[-0.01em] group-data-[collapsed=true]/side:hidden">Verity</span>
       </Link>
-      <div className="px-3 pt-1"><PaletteTrigger /></div>
+      <div className="px-3 pt-1 group-data-[collapsed=true]/side:pt-9"><PaletteTrigger /></div>
 
       <Group label="Kerja">
         <NavLink href="/beranda" icon={<Home size={15} />}>Beranda</NavLink>
@@ -66,35 +69,37 @@ export function Sidebar({ me, tenantKind, berkas, tenants }: Props) {
       </Group>
 
       {berkas.length > 0 && (
-        <Group label="Berkas aktif">
+        <div className="group-data-[collapsed=true]/side:hidden"><Group label="Berkas aktif">
           {berkas.map((b) => (
             <Link
               key={b.id}
               href={`/berkas/${b.id}`}
-              className="mx-2 flex min-w-0 items-center gap-[9px] rounded-md px-2.5 py-1.5 text-[13px] text-muted-foreground hover:bg-border-soft"
+              className="mx-2 flex min-w-0 items-center gap-[9px] rounded-lg px-2.5 py-1.5 text-[13px] text-muted-foreground transition-colors hover:bg-foreground/[0.04] hover:text-foreground"
             >
               <Dot />
               <span className="truncate">{b.title}</span>
             </Link>
           ))}
-        </Group>
+        </Group></div>
       )}
 
-      <div className="mt-auto border-t border-border px-4 py-3">
-        {tenants.length > 1 && <TenantSwitcher tenants={tenants} activeId={me.tenantId} />}
-        <div className="flex items-center gap-2.5">
-          <div className="grid size-7 place-items-center rounded-full bg-primary-soft text-xs font-semibold text-primary">
+      <div className="mt-auto px-3 pt-4 pb-3">
+        <div className="group-data-[collapsed=true]/side:hidden">
+          {tenants.length > 1 && <TenantSwitcher tenants={tenants} activeId={me.tenantId} />}
+        </div>
+        <div className="flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 group-data-[collapsed=true]/side:justify-center group-data-[collapsed=true]/side:px-0">
+          <div className="grid size-8 shrink-0 place-items-center rounded-full bg-card text-[12px] font-semibold text-foreground shadow-surface" title={me.name}>
             {initials}
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 group-data-[collapsed=true]/side:hidden">
             <div className="truncate text-[13px] font-medium">{me.name}</div>
-            <div className="text-[11.5px] text-subtle">{ROLE_LABEL[me.role]}</div>
+            <div className="truncate text-[11.5px] text-subtle">{ROLE_LABEL[me.role]}</div>
           </div>
-          <form action="/auth/keluar" method="post">
-            <button className="text-[11.5px] text-subtle hover:text-foreground">Keluar</button>
+          <form action="/auth/keluar" method="post" className="group-data-[collapsed=true]/side:hidden">
+            <button className="rounded-md px-1.5 py-1 text-[12px] text-subtle hover:bg-foreground/[0.05] hover:text-foreground">Keluar</button>
           </form>
         </div>
       </div>
-    </nav>
+    </SidebarFrame>
   );
 }

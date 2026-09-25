@@ -43,7 +43,7 @@ export default async function KlapperPage({ searchParams }: { searchParams: Prom
       <AgentPageContext context={{ kind: "kantor", label: "Buku klapper", page: "register" }} suggestions={["cari Laras di klapper", "akta final bulan ini"]} />
       <PageHeader eyebrow="Register" title="Buku klapper digital"
         meta={<span>{byName.size} nama terindeks. Terbentuk otomatis dari pihak pada akta yang sudah final.</span>} />
-      <div className="mx-auto w-full max-w-[1100px] space-y-4 px-8 py-7">
+      <div className="w-full max-w-[1100px] space-y-4 px-8 pt-5 pb-10">
         <SearchForm action="/register/klapper" value={q} placeholder="Cari nama penghadap atau badan usaha" hidden={{ huruf }} />
         <nav aria-label="Filter huruf" className="flex flex-wrap gap-1">
           <Link href={qs({ huruf: undefined, nama: undefined })} className={cn("rounded px-2 py-1 text-[12px] text-muted-foreground", !huruf && "bg-foreground text-card")}>Semua</Link>
@@ -69,13 +69,14 @@ export default async function KlapperPage({ searchParams }: { searchParams: Prom
               ))}
             </Table>
           )}
-          <Section title={nama ?? "Detail"}>
+          <Section title={nama ?? "Detail"}
+            description={selected.length ? `${selected.length} akta · terakhir diperbarui ${formatDate(selected.map((e) => e.akta_date).sort().at(-1)!)}` : undefined}>
             {selected.length === 0 ? (
               <p className="py-6 text-center text-[12.5px] text-subtle">Pilih nama untuk melihat akta yang terdaftar.</p>
             ) : (
               <ul className="space-y-2">
                 {selected.map((e) => (
-                  <li key={e.id} className="rounded border border-border-soft px-3 py-2 text-[12.5px]">
+                  <li key={e.id} className="rounded-lg bg-muted px-3 py-2.5 text-[12.5px]">
                     <div className="font-medium tabular-nums">
                       {e.akta_id ? <Link href={`/akta/${e.akta_id}`} className="hover:underline">{formatAktaNumber(e.akta_number, e.period)}</Link> : formatAktaNumber(e.akta_number, e.period)}
                       <span className="ml-1.5 font-normal text-subtle">{APPOINTMENT_LABEL[e.appointment]}</span>

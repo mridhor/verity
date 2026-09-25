@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import { env } from "@/lib/env";
+import { REMEMBER_COOKIE, withoutExpiry } from "./remember";
 
 /**
  * Server-side client acting as the signed-in user: every query runs under RLS.
@@ -15,7 +16,8 @@ export const createClient = cache(async () => {
       getAll: () => cookieStore.getAll(),
       setAll: (toSet) => {
         try {
-          for (const { name, value, options } of toSet) cookieStore.set(name, value, options);
+          const sessionOnly = cookieStore.get(REMEMBER_COOKIE)?.value === "0";
+          for (const { name, value, options } of toSet) cookieStore.set(name, value, sessionOnly ? withoutExpiry(options) : options);
         } catch {
           // Called from a Server Component: proxy.ts refreshes the session instead.
         }

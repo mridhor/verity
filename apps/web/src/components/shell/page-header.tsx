@@ -5,23 +5,23 @@ export function PageHeader({
   actions,
   children,
 }: {
-  eyebrow?: string;
+  eyebrow?: React.ReactNode;
   title: string;
   meta?: React.ReactNode;
   actions?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   return (
-    <header className="border-b border-border bg-background px-8 pt-[22px]">
-      <div className="flex items-start justify-between gap-6">
+    <header className={children ? "border-b border-border-soft px-8 pt-7" : "px-8 pt-7 pb-1"}>
+      <div className="flex items-end justify-between gap-6">
         <div className="min-w-0">
-          {eyebrow && <div className="mb-1 text-[12.5px] text-subtle">{eyebrow}</div>}
-          <h1 className="font-serif text-[27px] font-medium tracking-[-0.01em]">{title}</h1>
-          {meta && <div className="mt-2 flex flex-wrap gap-[22px] text-[12.5px] text-muted-foreground">{meta}</div>}
+          {eyebrow && <div className="mb-2 text-[13px] text-subtle">{eyebrow}</div>}
+          <h1 className="font-serif text-[34px] leading-[1.12] font-normal tracking-[-0.022em]">{title}</h1>
+          {meta && <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[13px] text-muted-foreground">{meta}</div>}
         </div>
-        {actions}
+        {actions && <div className="flex shrink-0 items-center gap-2 pb-1">{actions}</div>}
       </div>
-      {children ?? <div className="h-5" />}
+      {children}
     </header>
   );
 }

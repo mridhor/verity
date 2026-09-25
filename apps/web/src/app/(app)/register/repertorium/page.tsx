@@ -36,7 +36,7 @@ export default async function RepertoriumPage({ searchParams }: { searchParams: 
       <AgentPageContext context={{ kind: "kantor", label: "Repertorium", page: "register" }} suggestions={["repertorium notaris 2026", "repertorium PPAT 2026", "akta final bulan ini"]} />
       <PageHeader eyebrow="Register" title={`Repertorium ${appointment === "ppat" ? "PPAT" : "Notaris"} ${tahun}`}
         meta={<span>Terbentuk otomatis saat akta difinalkan. Entri tidak dapat diubah atau dihapus; koreksi dicatat sebagai entri baru.</span>} />
-      <div className="mx-auto w-full max-w-[1100px] space-y-4 px-8 py-7">
+      <div className="w-full max-w-[1100px] space-y-4 px-8 pt-5 pb-10">
         <div className="flex flex-wrap items-center gap-6">
           <div className="flex gap-1.5">
             {(["notaris", "ppat"] as const).map((a) => (

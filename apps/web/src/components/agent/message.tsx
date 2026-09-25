@@ -52,7 +52,7 @@ export function AgentMessage({ message, compact }: { message: UiMessage; compact
   const hasContent = v.blocks.length > 0 || v.errors.length > 0 || v.links.length > 0;
   return (
     <div className="mb-7" aria-live={message.streaming ? "polite" : undefined}>
-      <ToolSteps steps={v.steps} />
+      <ToolSteps steps={v.steps} running={message.streaming} />
       {message.streaming && !hasContent && <p className="agent-pulse text-[13px] text-subtle">Agen sedang membaca data…</p>}
       {v.blocks.map((b) => b.kind === "text" ? (
         <p key={b.id} className={cn(compact ? "agent-p-sm" : "agent-p", "mb-2.5")}>
@@ -69,7 +69,7 @@ export function AgentMessage({ message, compact }: { message: UiMessage; compact
       {v.links.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-2">
           {v.links.map((l) => (
-            <Link key={l.href} href={l.href} className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1.5 text-[12.5px] hover:border-subtle">
+            <Link key={l.href} href={l.href} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-[12.5px] font-medium shadow-card hover:bg-muted">
               {l.label} <ArrowUpRight size={12} />
             </Link>
           ))}
@@ -81,7 +81,7 @@ export function AgentMessage({ message, compact }: { message: UiMessage; compact
         <div className="mt-3 flex flex-wrap gap-1.5">
           {v.suggestions.map((s) => (
             <button key={s} type="button" disabled={busy} onClick={() => send(s)}
-              className="rounded-full border border-border bg-card px-2.5 py-1 text-[12px] text-muted-foreground hover:border-subtle hover:text-foreground">
+              className="rounded-lg border border-border bg-card px-2.5 py-1 text-[12.5px] text-muted-foreground shadow-card hover:bg-muted hover:text-foreground">
               {s}
             </button>
           ))}

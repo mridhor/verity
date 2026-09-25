@@ -24,11 +24,22 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
   --color-destructive: var(--destructive);
+  --color-destructive-soft: var(--destructive-soft);
   --color-highlight: var(--highlight);
   --color-ring: var(--ring);
   --radius-md: var(--radius);
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
+  --shadow-card: var(--elev-card);
+  --shadow-surface: var(--elev-surface);
+  --shadow-pop: var(--elev-pop);
   --font-sans: var(--font-geist), system-ui, sans-serif;
   --font-serif: var(--font-newsreader), Georgia, serif;
 }
@@ -36,7 +47,8 @@
 @layer base {
   * { border-color: var(--border); }
   html { -webkit-font-smoothing: antialiased; }
-  body { background: var(--background); color: var(--foreground); font-family: var(--font-sans); font-size: 14px; }
+  body { background: var(--background); color: var(--foreground); font-family: var(--font-sans); font-size: 14px; letter-spacing: -0.003em; }
+  h1, h2, h3 { text-wrap: balance; }
   :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 4px; }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
@@ -73,3 +85,7 @@ dialog.dialog-pop[open]::backdrop { animation: backdrop-in 140ms ease-out; }
 @media (prefers-reduced-motion: reduce) {
   dialog.dialog-pop[open], dialog.dialog-pop[open]::backdrop { animation: none; }
 }
+dialog.sheet-pop[open] { animation: sheet-in 180ms cubic-bezier(.2,.8,.2,1); }
+dialog.sheet-pop[open]::backdrop { animation: backdrop-in 180ms ease-out; }
+@keyframes sheet-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { dialog.sheet-pop[open], dialog.sheet-pop[open]::backdrop { animation: none; } }

@@ -1,17 +1,22 @@
 import { cn } from "@/lib/utils";
 
+// Status pills. Violet is not a status colour (it marks authority: citations, approvals, stamps).
 const TONES = {
-  neutral: "bg-border-soft text-muted-foreground",
-  info: "bg-primary-soft text-primary",
-  warning: "bg-[#f6ecd9] text-warning",
-  success: "bg-[#e3efe7] text-success",
-  danger: "bg-[#f5e3e0] text-destructive",
+  neutral: "bg-muted text-muted-foreground",
+  info: "bg-info-soft text-info",
+  warning: "bg-warning-soft text-warning",
+  success: "bg-success-soft text-success",
+  danger: "bg-destructive-soft text-destructive",
+  authority: "bg-primary-soft text-primary",
 } as const;
 export type BadgeTone = keyof typeof TONES;
 
-export function Badge({ tone = "neutral", className, children }: { tone?: BadgeTone; className?: string; children: React.ReactNode }) {
+export function Badge({ tone = "neutral", dot = true, className, children }: {
+  tone?: BadgeTone; dot?: boolean; className?: string; children: React.ReactNode;
+}) {
   return (
-    <span className={cn("inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 text-[11.5px] font-medium", TONES[tone], className)}>
+    <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-[3px] text-[12px] font-medium leading-4", TONES[tone], className)}>
+      {dot && <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-current" />}
       {children}
     </span>
   );

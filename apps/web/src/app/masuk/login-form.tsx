@@ -23,6 +23,10 @@ export function LoginForm() {
         </div>
         <Input id="password" name="password" type="password" autoComplete="current-password" required />
       </div>
+      <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
+        <input type="checkbox" name="remember" defaultChecked className="size-4 rounded accent-[var(--foreground)]" />
+        Ingat saya di perangkat ini
+      </label>
       {state.error && (
         <p role="alert" className="text-[12.5px] text-destructive">
           {state.error}

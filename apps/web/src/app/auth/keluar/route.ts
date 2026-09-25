@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
+  await supabase.rpc("log_auth_event", { p_kind: "auth.logout" });
   await supabase.auth.signOut();
   return NextResponse.redirect(new URL("/masuk", request.url), { status: 303 });
 }

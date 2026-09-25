@@ -361,7 +361,7 @@ export async function legal(c: Ctx, query: string) {
   const list = rows<{ id: string; category: LegalCategory; number_label: string; title: string; year: number | null; status: string; verified_by: string | null }>(await sel);
   if (list.length === 0) return void c.run.say(`Tidak ada referensi dasar hukum yang cocok dengan "${q}". Referensi baru bisa ditambahkan di halaman Dasar hukum.`);
   c.run.table(["Peraturan", "Kategori", "Status", "Verifikasi"], list.map((r) => ({
-    cells: [`${r.number_label}: ${r.title} ${c.run.cite({ kind: "legal", id: r.id, label: r.number_label, href: `/dasar-hukum?q=${encodeURIComponent(r.number_label)}` })}`, LEGAL_CATEGORY_LABEL[r.category], r.status === "berlaku" ? "Berlaku" : r.status === "diubah" ? "Telah diubah" : "Dicabut", r.verified_by ? "Terverifikasi" : "Belum terverifikasi"],
+    cells: [`${r.number_label}: ${r.title} ${c.run.cite({ kind: "legal", id: r.id, label: r.number_label, href: `/dasar-hukum/${r.id}` })}`, LEGAL_CATEGORY_LABEL[r.category], r.status === "berlaku" ? "Berlaku" : r.status === "diubah" ? "Telah diubah" : "Dicabut", r.verified_by ? "Terverifikasi" : "Belum terverifikasi"],
     tone: r.verified_by ? "ok" : "warn",
   })));
   if (list.some((r) => !r.verified_by)) c.run.say("Referensi yang belum terverifikasi belum diperiksa Notaris; jangan diandalkan sebelum diverifikasi.");

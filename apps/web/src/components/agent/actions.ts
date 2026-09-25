@@ -109,7 +109,7 @@ export async function searchEverything(query: string): Promise<SearchHit[]> {
     ...list<{ id: string; title: string; doc_type: DocumentType; berkas_id: string }>(docs)
       .map((d) => ({ group: "Dokumen", label: d.title, sub: DOCUMENT_TYPE_LABEL[d.doc_type], href: `/berkas/${d.berkas_id}?tab=dokumen` })),
     ...list<{ id: string; number_label: string; title: string }>(legal)
-      .map((l) => ({ group: "Dasar hukum", label: l.number_label, sub: l.title, href: `/dasar-hukum?q=${encodeURIComponent(l.number_label)}` })),
+      .map((l) => ({ group: "Dasar hukum", label: l.number_label, sub: l.title, href: `/dasar-hukum/${l.id}` })),
   ];
 }
 

@@ -43,6 +43,7 @@ export function MfaForm({ next }: { next: string }) {
     const { error } = await createClient().auth.mfa.challengeAndVerify({ factorId, code: code.trim() });
     setBusy(false);
     if (error) return setError("Kode tidak cocok atau sudah kedaluwarsa.");
+    await createClient().rpc("log_auth_event", { p_kind: "auth.mfa_verified" });
     router.replace(next);
     router.refresh();
   }

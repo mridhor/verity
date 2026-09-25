@@ -22,28 +22,29 @@ export function Composer({ compact }: { compact?: boolean }) {
     void send(t);
   };
   return (
-    <div className="rounded-[10px] border border-border bg-card px-3 pt-3 pb-2.5 focus-within:border-subtle">
+    <div className="rounded-2xl border border-border bg-muted/70 p-2 transition-colors focus-within:border-foreground/20 focus-within:bg-card focus-within:shadow-surface">
+      <div className="flex items-center gap-1.5 px-1.5 pt-1 pb-1.5">
+        <span className="inline-flex max-w-full items-center gap-1.5 truncate rounded-md bg-card px-2 py-1 text-[12px] text-muted-foreground shadow-card">
+          <AtSign size={12} className="shrink-0 text-subtle" /> <span className="truncate">{context.label}</span>
+        </span>
+      </div>
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }}
-        rows={2}
+        rows={compact ? 2 : 3}
         placeholder={PLACEHOLDER[context.kind]}
         aria-label="Pesan untuk agen"
-        className="mb-1.5 w-full resize-none bg-transparent text-sm outline-none placeholder:text-subtle"
+        className="w-full resize-none bg-transparent px-2 py-1 text-[14.5px] leading-relaxed outline-none placeholder:text-subtle"
       />
-      <div className="flex items-center gap-1.5">
-        <span className="inline-flex max-w-[60%] items-center gap-1 truncate rounded border border-border px-1.5 py-0.5 text-[11.5px] text-muted-foreground">
-          <AtSign size={11} className="shrink-0" /> <span className="truncate">{context.label}</span>
-        </span>
+      <div className="flex items-center gap-2 px-1.5 pb-0.5">
+        <span className="text-[11.5px] text-subtle">Agen hanya membaca; perubahan butuh persetujuan.</span>
         <div className="flex-1" />
-        {!compact && <span className="text-[11.5px] text-subtle">Agen hanya membaca; perubahan butuh persetujuan</span>}
         <button type="button" onClick={submit} disabled={!text.trim() || busy} aria-label="Kirim"
-          className="grid size-[30px] place-items-center rounded-md bg-foreground text-card disabled:bg-border disabled:text-subtle">
-          <ArrowUp size={15} />
+          className="grid size-9 place-items-center rounded-lg bg-foreground text-card transition-colors hover:bg-foreground/85 disabled:bg-[#d8d5cc] disabled:text-card">
+          <ArrowUp size={16} />
         </button>
       </div>
-      {compact && <p className="mt-1.5 text-[11px] text-subtle">Agen hanya membaca; perubahan butuh persetujuan.</p>}
     </div>
   );
 }
@@ -68,7 +69,7 @@ export function Conversation({ compact }: { compact?: boolean }) {
             <div className="mt-4 flex flex-wrap gap-1.5">
               {suggestions.map((s) => (
                 <button key={s} type="button" disabled={busy} onClick={() => send(s)}
-                  className="rounded-full border border-border bg-card px-3 py-1.5 text-[12.5px] text-muted-foreground hover:border-subtle hover:text-foreground">
+                  className="rounded-lg border border-border bg-card px-3 py-1.5 text-[13px] text-muted-foreground shadow-card transition-colors hover:bg-muted hover:text-foreground">
                   {s}
                 </button>
               ))}
@@ -76,7 +77,7 @@ export function Conversation({ compact }: { compact?: boolean }) {
           </div>
         )}
         {thread.messages.map((m) => m.role === "user" ? (
-          <div key={m.id} className="mb-6 ml-auto max-w-[85%] rounded-[10px_10px_2px_10px] border border-border bg-card px-3.5 py-2.5 text-sm leading-relaxed">
+          <div key={m.id} className="mb-6 ml-auto max-w-[85%] rounded-2xl bg-muted px-4 py-3 text-[14px] leading-relaxed">
             {m.body}
             <div className="mt-1.5 text-[11.5px] text-subtle">{m.author}, {m.createdAt}</div>
           </div>

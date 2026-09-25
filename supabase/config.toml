@@ -65,3 +65,8 @@ verify_enabled = true
 [auth.hook.custom_access_token]
 enabled = true
 uri = "pg-functions://postgres/public/custom_access_token_hook"
+
+# Account creation with an initial password (Super Admin, aal2). The function verifies the
+# caller's JWT itself with getClaims (asymmetric signing keys), so the gateway check is off.
+[functions.admin-create-user]
+verify_jwt = false

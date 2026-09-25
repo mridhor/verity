@@ -10,13 +10,15 @@ export function NavLink({ href, icon, children }: { href: string; icon: React.Re
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
+      title={typeof children === "string" ? children : undefined}
       className={cn(
-        "mx-2 my-px flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13.5px] text-muted-foreground hover:bg-border-soft",
-        active && "bg-card font-medium text-foreground shadow-[inset_0_0_0_1px_var(--border)]",
+        "mx-2 my-px flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13.5px] text-muted-foreground transition-colors hover:bg-foreground/[0.04] hover:text-foreground",
+        "group-data-[collapsed=true]/side:justify-center group-data-[collapsed=true]/side:px-0",
+        active && "bg-card font-medium text-foreground shadow-surface hover:bg-card",
       )}
     >
-      {icon}
-      {children}
+      <span className="shrink-0">{icon}</span>
+      <span className="truncate group-data-[collapsed=true]/side:sr-only">{children}</span>
     </Link>
   );
 }

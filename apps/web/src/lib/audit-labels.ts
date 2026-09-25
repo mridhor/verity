@@ -63,3 +63,34 @@ export const AUDIT_MODULES: { id: string; label: string; prefixes: string[] }[] 
 export function auditModule(action: string) {
   return AUDIT_MODULES.find((m) => m.prefixes.some((p) => action.startsWith(p)));
 }
+
+const STATUS: Record<string, string> = {
+  draft: "Draft", verifikasi: "Verifikasi", menunggu_ttd: "Menunggu TTD", selesai: "Selesai", diarsipkan: "Diarsipkan",
+};
+const ROLE: Record<string, string> = {
+  notaris: "Notaris/PPAT", partner: "Partner", associate: "Associate", staf_admin: "Staf administrasi", super_admin: "Super Admin",
+};
+const FIELD: Record<string, string> = {
+  title: "judul", notes: "keterangan", status: "status", number: "nomor", number_period: "periode", akta_date: "tanggal akta",
+  finalized_at: "waktu final", finalized_by: "pemfinal", done: "selesai", due_date: "tenggat", assignee_user_id: "penanggung jawab",
+  starts_at: "waktu", location: "lokasi", kind: "jenis", full_name: "nama", nik: "NIK", address: "alamat", occupation: "pekerjaan",
+  file_path: "lampiran", source_url: "tautan sumber", verified_by: "verifikasi", verified_at: "verifikasi", done_at: "selesai",
+  done_by: "selesai", year: "tahun", category: "kategori", number_label: "nomor", completed_at: "selesai", completed_by: "selesai",
+};
+
+/** Short, content-free summary of `details` (ids, statuses, counts only; rule 9). */
+export function auditDetail(action: string, details: unknown): string {
+  const d = (details ?? {}) as Record<string, unknown>;
+  if (action === "akta.status_changed") return `${STATUS[String(d.from)] ?? d.from} → ${STATUS[String(d.to)] ?? d.to}`;
+  if (action === "akta.finalized") return `Nomor ${String(d.number).padStart(3, "0")}/${d.period}`;
+  if (action.startsWith("tenant_member.") && d.role) return `${ROLE[String(d.role)] ?? d.role}${d.active === false ? " · nonaktif" : ""}`;
+  if (action === "tenant_settings.updated") return `Sesi ${d.session_timeout_hours} jam${d.annual_akta_target ? ` · target ${d.annual_akta_target}` : ""}`;
+  if (action === "session.revoked_all") return `${d.sessions ?? 0} sesi dicabut`;
+  if (action.startsWith("auth.")) return d.aal === "aal2" ? "Dengan 2FA" : "";
+  if (action === "official.upserted" && d.appointment) return String(d.appointment).toUpperCase();
+  if (Array.isArray(d.changed)) {
+    const names = [...new Set((d.changed as string[]).map((k) => FIELD[k] ?? k))];
+    return names.length ? `Diubah: ${names.slice(0, 4).join(", ")}${names.length > 4 ? "…" : ""}` : "";
+  }
+  return "";
+}

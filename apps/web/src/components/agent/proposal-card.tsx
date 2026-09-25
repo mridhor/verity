@@ -44,13 +44,13 @@ export function ProposalCards({ ids }: { ids: string[] }) {
     router.refresh();
   });
 
-  if (!items) return <div className="mt-4 h-24 animate-pulse rounded-md border border-border bg-card" aria-busy />;
+  if (!items) return <div className="mt-4 h-24 animate-pulse rounded-xl border border-border bg-card" aria-busy />;
   return (
     <div className="mt-4 space-y-3">
       {items.map((p) => (
-        <div key={p.id} className={cn("relative rounded-md border bg-card px-4 py-3.5", p.status === "applied" ? "border-primary" : "border-border")}>
+        <div key={p.id} className={cn("relative rounded-xl border bg-card px-5 py-4 shadow-card", p.status === "applied" ? "border-primary/60" : "border-border")}>
           <div className="mb-2 flex items-baseline justify-between gap-3">
-            <div className="text-[13.5px] font-semibold">Perubahan yang diusulkan</div>
+            <div className="text-[14px] font-medium">Perubahan yang diusulkan</div>
             <div className="text-[12px] text-subtle">
               {p.status === "pending" ? (p.tier === "notaris" ? "Perlu persetujuan Notaris" : "Perlu persetujuan staf berkas") : STATUS_NOTE[p.status]}
             </div>

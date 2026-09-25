@@ -1,7 +1,9 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { REMEMBER_COOKIE } from "@/lib/supabase/remember";
 import { createClient } from "@/lib/supabase/server";
 
 const schema = z.object({ email: z.email(), password: z.string().min(1) });
@@ -14,6 +16,11 @@ const CREDENTIAL_ERRORS = new Set(["invalid_credentials", "email_not_confirmed",
 export async function login(_: LoginState, form: FormData): Promise<LoginState> {
   const parsed = schema.safeParse({ email: form.get("email"), password: form.get("password") });
   if (!parsed.success) return { error: "Isi email dan kata sandi dengan benar." };
+  const remember = form.get("remember") === "on";
+  (await cookies()).set(REMEMBER_COOKIE, remember ? "1" : "0", {
+    path: "/", httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production",
+    ...(remember ? { maxAge: 60 * 60 * 24 * 30 } : {}),
+  });
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) {
@@ -24,6 +31,7 @@ export async function login(_: LoginState, form: FormData): Promise<LoginState> 
     console.error("login failed", { code: error.code, status: error.status });
     return { error: `Layanan masuk sedang bermasalah (kode: ${error.code}). Hubungi administrator.` };
   }
-  // proxy.ts sends privileged roles on to /masuk/mfa.
+  await supabase.rpc("log_auth_event", { p_kind: "auth.login" });
+  // proxy.ts sends privileged roles on to /masuk/mfa, and new accounts to set their password.
   redirect("/beranda");
 }

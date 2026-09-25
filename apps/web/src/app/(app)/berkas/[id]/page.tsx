@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Check } from "lucide-react";
+import { CalendarDays, Check, Clock, FileText, UserRound } from "lucide-react";
 import { AgentPageContext } from "@/components/agent/agent-provider";
 import { BerkasWorkspace } from "@/components/agent/berkas-workspace";
 import { DocumentTable, type DocumentRow } from "@/components/documents/document-table";
 import { UploadForm } from "@/components/documents/upload-form";
-import { PageHeader } from "@/components/shell/page-header";
 import { AKTA_STATUS_TONE, Badge } from "@/components/ui/badge";
 import { EmptyState, Table, td } from "@/components/ui/blocks";
 import { Button } from "@/components/ui/button";
@@ -60,7 +59,7 @@ export default async function BerkasPage({
     supabase.from("berkas_members").select("user_id, active").eq("berkas_id", id),
     supabase.from("audit_log").select("id, occurred_at, actor_type, actor_user_id, action").eq("berkas_id", id).order("id", { ascending: false }).limit(50),
     supabase.from("akta").select("id, title, akta_type, status, number, number_period, akta_date, appointment").eq("berkas_id", id).order("created_at"),
-    supabase.from("documents").select("id, title, doc_type, file_name, mime_type, size_bytes, uploaded_at, uploaded_by").eq("berkas_id", id).order("uploaded_at", { ascending: false }),
+    supabase.from("documents").select("id, title, doc_type, file_name, mime_type, size_bytes, uploaded_at, uploaded_by, akta(id, title, number, number_period)").eq("berkas_id", id).order("uploaded_at", { ascending: false }),
     supabase.from("checklist_items").select("id, title, assignee_user_id, due_date, done, done_by, done_at").eq("berkas_id", id).order("created_at"),
     supabase.from("schedules").select("title, starts_at").eq("berkas_id", id).gte("starts_at", new Date().toISOString()).order("starts_at").limit(1).maybeSingle(),
   ]);
@@ -75,26 +74,40 @@ export default async function BerkasPage({
 
   return (
     <>
-      <PageHeader
-        eyebrow={`Berkas / ${type?.group ?? berkas.type}`}
-        title={berkas.title}
-        meta={
-          <>
-            <span>Akta: {(akta ?? []).length === 0 ? "belum ada" : (akta ?? []).map((a) => formatAktaNumber(a.number, a.number_period) ?? "draft").join(", ")}</span>
-            <span>Penanggung jawab: {nameOf.get(berkas.pic_user_id ?? "") ?? "—"}</span>
-            <span>
-              Tenggat terdekat:{" "}
+      <header className="border-b border-border-soft bg-[linear-gradient(180deg,#eceeea_0%,#f6f6f3_55%,#ffffff_100%)] px-8 pt-7">
+        <div className="flex items-start gap-4">
+          <span aria-hidden className="grid size-12 shrink-0 place-items-center rounded-xl bg-[#3e4a47] font-serif text-[24px] leading-none text-white shadow-surface">
+            {(type?.label ?? berkas.title).charAt(0)}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="text-[13px] text-subtle">Berkas · {type?.group ?? berkas.type} · {type?.label ?? berkas.type}</div>
+            <h1 className="mt-0.5 font-serif text-[32px] leading-[1.15] font-normal tracking-[-0.02em]">{berkas.title}</h1>
+            <div className="mt-3 flex flex-wrap gap-1.5 text-[12.5px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-card/80 px-2.5 py-1 shadow-card">
+                <FileText size={13} className="text-subtle" />
+                {(akta ?? []).length === 0 ? "Belum ada akta" : (akta ?? []).map((a) => formatAktaNumber(a.number, a.number_period) ?? "Draft").join(", ")}
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-card/80 px-2.5 py-1 shadow-card">
+                <UserRound size={13} className="text-subtle" /> {nameOf.get(berkas.pic_user_id ?? "") ?? "—"}
+              </span>
               {(() => {
                 const due = (checklist ?? []).filter((c) => !c.done && c.due_date).map((c) => c.due_date as string).sort()[0];
-                return due ? <b className="font-medium text-foreground">{formatDate(due)}</b> : "—";
+                return due ? (
+                  <span className={cn("inline-flex items-center gap-1.5 rounded-lg bg-card/80 px-2.5 py-1 shadow-card", due < jakartaToday().date && "text-destructive")}>
+                    <Clock size={13} className="text-subtle" /> Tenggat {formatDate(due)}
+                  </span>
+                ) : null;
               })()}
-            </span>
-            {nextSchedule && <span>Jadwal: {nextSchedule.title}, {formatLongDate(jakartaDateOf(nextSchedule.starts_at))} {formatTime(nextSchedule.starts_at)}</span>}
-          </>
-        }
-      >
+              {nextSchedule && (
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-card/80 px-2.5 py-1 shadow-card">
+                  <CalendarDays size={13} className="text-subtle" /> {nextSchedule.title}, {formatLongDate(jakartaDateOf(nextSchedule.starts_at))} {formatTime(nextSchedule.starts_at)}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
         {steps.length > 0 && (
-          <ol className="mt-[18px] mb-4 flex flex-wrap gap-x-[18px] gap-y-1" aria-label="Langkah workflow">
+          <ol className="mt-5 flex flex-wrap gap-x-[18px] gap-y-1" aria-label="Langkah workflow">
             {steps.map((s, i) => {
               const state = i < current ? "done" : i === current ? "now" : "next";
               return (
@@ -109,24 +122,26 @@ export default async function BerkasPage({
             {type && !type.stepsVerified && <li className="text-[11.5px] text-subtle">(langkah belum dikonfirmasi Notaris)</li>}
           </ol>
         )}
-        <div role="tablist" className="flex gap-[22px]">
+        <div role="tablist" className="mt-5 flex flex-wrap gap-1 pb-3">
           {TABS.map((t) => (
             <Link
               key={t.id}
               role="tab"
               aria-selected={t.id === tab}
               href={`/berkas/${id}?tab=${t.id}`}
-              className={cn("-mb-px border-b-2 border-transparent pb-[11px] text-[13.5px] text-muted-foreground", t.id === tab && "border-foreground font-medium text-foreground")}
+              className={cn("rounded-lg px-3.5 py-1.5 text-[13.5px] text-muted-foreground transition-colors hover:bg-card/70 hover:text-foreground",
+                t.id === tab && "bg-card font-medium text-foreground shadow-surface hover:bg-card")}
             >
               {t.label}
-              {t.id === "dokumen" && (docs ?? []).length > 0 && <span className="ml-1.5 text-subtle">{docs!.length}</span>}
+              {t.id === "dokumen" && (docs ?? []).length > 0 && <span className="ml-1.5 text-subtle tabular-nums">{docs!.length}</span>}
+              {t.id === "akta" && (akta ?? []).length > 0 && <span className="ml-1.5 text-subtle tabular-nums">{akta!.length}</span>}
               {t.id === "checklist" && (checklist ?? []).length > 0 && (
-                <span className="ml-1.5 text-subtle">{checklist!.filter((c) => c.done).length}/{checklist!.length}</span>
+                <span className="ml-1.5 text-subtle tabular-nums">{checklist!.filter((c) => c.done).length}/{checklist!.length}</span>
               )}
             </Link>
           ))}
         </div>
-      </PageHeader>
+      </header>
 
       <AgentPageContext
         context={{ kind: "berkas", label: `Berkas: ${berkas.title}`, berkasId: berkas.id }}
@@ -135,7 +150,7 @@ export default async function BerkasPage({
       {tab === "percakapan" ? (
         <div className="flex min-h-[520px] flex-1"><BerkasWorkspace /></div>
       ) : (
-      <div className={cn("mx-auto w-full px-8 py-7", tab === "dokumen" || tab === "akta" ? "max-w-[1000px]" : "max-w-[720px]")}>
+      <div className={cn("w-full px-8 pt-6 pb-10", tab === "dokumen" || tab === "akta" ? "max-w-[1100px]" : "max-w-[760px]")}>
 
         {tab === "akta" && (
           <div className="space-y-4">

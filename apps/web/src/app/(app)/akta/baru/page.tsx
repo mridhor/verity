@@ -18,7 +18,7 @@ export default async function NewAktaPage({ searchParams }: { searchParams: Prom
   return (
     <>
       <PageHeader eyebrow="Akta" title="Akta baru" />
-      <div className="mx-auto w-full max-w-[1100px] px-8 py-7">
+      <div className="w-full max-w-[1100px] px-8 pt-5 pb-10">
         {(officials ?? []).length === 0 ? (
           <p className="max-w-xl rounded-md bg-border-soft px-4 py-3 text-[13px]">
             Belum ada data pejabat (Notaris/PPAT) untuk kantor ini. Super Admin perlu menambahkannya di halaman Pengguna.

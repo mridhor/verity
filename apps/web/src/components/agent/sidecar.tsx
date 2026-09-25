@@ -21,22 +21,22 @@ export function AgentSidecar() {
 
   if (!visible) return null;
   return (
-    <aside aria-label="Agen" className="fixed inset-0 z-30 flex flex-col bg-pane md:static md:inset-auto md:z-auto md:w-[400px] md:shrink-0 md:border-l md:border-border">
-      <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-        <Sparkles size={15} className="text-primary" aria-hidden />
+    <aside aria-label="Agen" className="fixed inset-0 z-30 flex flex-col bg-card md:static md:inset-auto md:z-auto md:w-[400px] md:shrink-0 md:overflow-hidden md:rounded-xl md:shadow-surface">
+      <div className="flex items-center gap-2.5 border-b border-border-soft px-4 py-3">
+        <span className="grid size-7 place-items-center rounded-md bg-foreground font-serif text-[15px] leading-none text-card" aria-hidden>V</span>
         <div className="min-w-0 flex-1">
-          <div className="text-[13.5px] font-semibold">Agen</div>
-          <div className="truncate text-[11.5px] text-subtle">{context.label}</div>
+          <div className="text-[13.5px] font-medium">Agen Verity</div>
+          <div className="truncate text-[12px] text-subtle">{context.label}</div>
         </div>
-        <span className="rounded bg-border-soft px-1.5 py-0.5 text-[10.5px] text-muted-foreground" title="Agen berbasis aturan; belum memakai model AI">
+        <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground" title="Agen berbasis aturan; belum memakai model AI">
           Mode uji
         </span>
         {thread.messages.length > 0 && (
           <button type="button" onClick={newThread} aria-label="Percakapan baru" title="Percakapan baru"
-            className="rounded-md p-1.5 text-subtle hover:bg-border-soft hover:text-foreground"><MessageSquarePlus size={15} /></button>
+            className="grid size-8 place-items-center rounded-lg text-subtle hover:bg-muted hover:text-foreground"><MessageSquarePlus size={15} /></button>
         )}
         <button ref={closeRef} type="button" onClick={() => setOpen(false)} aria-label="Tutup agen"
-          className="rounded-md p-1.5 text-subtle hover:bg-border-soft hover:text-foreground"><X size={15} /></button>
+          className="grid size-8 place-items-center rounded-lg text-subtle hover:bg-muted hover:text-foreground"><X size={15} /></button>
       </div>
       <Conversation compact />
     </aside>
@@ -47,10 +47,10 @@ export function AgentToggleButton() {
   const { open, setOpen, embedded } = useAgent();
   if (embedded) return null;
   return (
-    <button type="button" onClick={() => setOpen(!open)} aria-pressed={open}
-      className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1 text-[12.5px] text-foreground hover:border-subtle">
-      <Sparkles size={13} className="text-primary" aria-hidden /> Tanya agen
-      <kbd className="ml-1 rounded border border-border px-1 font-sans text-[10.5px] text-subtle">⌘J</kbd>
+    <button type="button" onClick={() => setOpen(!open)} aria-pressed={open} title="Tanya agen (⌘J)"
+      className={`inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-[13px] font-medium text-foreground shadow-card transition-colors ${open ? "bg-muted" : "bg-card hover:bg-muted"}`}>
+      <Sparkles size={14} aria-hidden /> Tanya agen
+      <kbd className="rounded border border-border px-1 font-sans text-[10.5px] font-normal text-subtle">⌘J</kbd>
     </button>
   );
 }

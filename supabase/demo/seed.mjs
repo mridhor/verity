@@ -280,7 +280,7 @@ cases.forEach((cs, i) => {
       }
     }
     if (["ajb", "hibah", "apht"].includes(cs.type)) docs.push({ berkas: "b", akta: "a", type: "sertifikat", title: `Sertifikat ${ak.title.replace(/^(Akta Jual Beli|Akta Hibah|APHT) /, "")}`, file: "Sertifikat_SHM.pdf", mime: "application/pdf", days: cs.days - 2, by: pic });
-    if (ak.type === "Kuasa") docs.push({ berkas: "b", akta: "a", type: "surat_kuasa", title: "Draft surat kuasa dari klien", file: "Draft_Surat_Kuasa.docx", mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", days: cs.days - 1, by: pic });
+    if (ak.type === "Kuasa") docs.push({ berkas: "b", akta: "a", type: "surat_kuasa", title: "Draft surat kuasa dari klien", file: "Draft_Surat_Kuasa.pdf", mime: "application/pdf", days: cs.days - 1, by: pic });
     if (ak.finalDaysAgo !== undefined) docs.push({ berkas: "b", akta: "a", type: "minuta", title: `Minuta ${ak.title}`, file: "Minuta_Akta.pdf", mime: "application/pdf", days: ak.finalDaysAgo, by: pic, afterFinal: ref });
     for (const d of docs.filter((x) => !x.emitted && !x.afterFinal)) {
       d.emitted = true;
@@ -379,10 +379,20 @@ drop schema verity_seed cascade;`);
 const work = mkdtempSync(join(tmpdir(), "verity-seed-"));
 const file = join(work, "seed.sql");
 writeFileSync(file, `${(await import("node:fs")).readFileSync(join(here, "helpers.sql"), "utf8")}\n${out.join("\n")}\n`);
-const cli = (...a) => execFileSync("supabase", a, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+if (opt("--sql-out")) { writeFileSync(opt("--sql-out"), (await import("node:fs")).readFileSync(file)); console.log(`SQL ditulis ke ${opt("--sql-out")}`); process.exit(0); }
+const cli = (...a) => execFileSync("supabase", a, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024 });
 console.log(`Seeding ${cases.length} berkas, ${cases.reduce((n, c) => n + c.akta.length, 0)} akta (${finals.length} final), ${persons.length} orang, ${COMPANIES.length} badan usaha…`);
+// psql for the local stack (the CLI drops errors of large scripts); the Management API for --linked.
+const PSQL = ["/opt/homebrew/opt/postgresql@17/bin/psql", "/usr/bin/psql"].find((p) => { try { execFileSync(p, ["--version"]); return true; } catch { return false; } });
 try {
-  cli("db", "query", target, "-f", file);
+  if (args.includes("--files-only")) { /* data already seeded: only upload missing files */ }
+  else if (target === "--local" && PSQL) {
+    execFileSync(PSQL, ["postgresql://postgres:postgres@127.0.0.1:54322/postgres", "-v", "ON_ERROR_STOP=1", "-1", "-q", "-f", file],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  } else {
+    const r = cli("db", "query", target, "-f", file);
+    if (/error/i.test(r) && !/"rows"/.test(r)) throw Object.assign(new Error(r), { stdout: r });
+  }
 } catch (e) {
   console.error((e.stderr || e.stdout || String(e)).toString().slice(0, 2000));
   rmSync(work, { recursive: true, force: true });
@@ -398,11 +408,23 @@ const root = join(work, "files");
 for (const r of rows) {
   const path = join(root, r.storage_path);
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, r.mime_type === "image/png" ? png(r.title) : r.mime_type === "application/pdf" ? pdf(r.title) : Buffer.from(`${r.title}\nDOKUMEN CONTOH — DATA FIKTIF\n`));
+  writeFileSync(path, r.mime_type === "image/png" ? png(r.title) : pdf(r.title));
 }
 console.log(`Uploading ${rows.length} files…`);
-if (rows.length) cli("storage", "cp", target, "--experimental", "-r", "-j", "8", root + "/", "ss:///documents/");
-rmSync(work, { recursive: true, force: true });
+// One `storage cp` per file to the exact recorded path (a recursive copy nests the folder name).
+const { execFile } = await import("node:child_process");
+const upload = (r) => new Promise((resolve) => execFile("supabase",
+  ["storage", "cp", target, "--experimental", "--content-type", r.mime_type === "image/png" ? "image/png" : "application/pdf",
+   join(root, r.storage_path), `ss:///documents/${r.storage_path}`],
+  { encoding: "utf8" }, (err, _o, stderr) => resolve(err ? `${r.storage_path}: ${stderr || err.message}` : null)));
+const failures = [];
+for (let i = 0; i < rows.length; i += 8) {
+  failures.push(...(await Promise.all(rows.slice(i, i + 8).map(upload))).filter(Boolean));
+  process.stdout.write(`\r  ${Math.min(i + 8, rows.length)}/${rows.length}`);
+}
+process.stdout.write("\n");
+if (failures.length) console.error(`${failures.length} file gagal diunggah:\n${failures.slice(0, 5).join("\n")}`);
+if (!args.includes("--keep")) rmSync(work, { recursive: true, force: true }); else console.log(`Berkas kerja: ${work}`);
 console.log("Selesai.");
 
 // Minimal one-page PDF stating the document is a synthetic sample.
