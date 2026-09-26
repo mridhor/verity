@@ -98,7 +98,7 @@ export class OpenRouterAgent implements AgentProvider {
     } catch (err) {
       // Only the kind of failure, never the prompt or data (rule 9).
       console.error("openrouter agent failed", { name: (err as Error).name, status: (err as { status?: number }).status });
-      yield { type: "error", seq: seq++, message: "Agen LLM tidak dapat dihubungi. Coba lagi sebentar lagi." };
+      yield { type: "error", seq: seq++, message: failureMessage(err) };
       yield { type: "done", seq };
     }
   }
@@ -124,10 +124,29 @@ export class OpenRouterAgent implements AgentProvider {
         provider: { data_collection: "deny", zdr: true },
       }),
     });
-    const body = (await res.json().catch(() => ({}))) as Completion;
-    if (!res.ok || body.error) throw Object.assign(new Error("openrouter request failed"), { status: res.status });
+    const body = (await res.json().catch(() => ({}))) as Completion & { error?: { code?: number } };
+    if (!res.ok || body.error) throw Object.assign(new Error("openrouter request failed"), { status: body.error?.code ?? res.status });
     return body.choices?.[0]?.message ?? {};
   }
+}
+
+/** What went wrong, from the HTTP status only (never the provider's text, which may echo the prompt). */
+export function failureMessage(err: unknown) {
+  const status = (err as { status?: number }).status;
+  const name = (err as Error).name;
+  if (name === "TimeoutError" || name === "AbortError") return "Agen LLM tidak menjawab dalam 45 detik. Coba lagi.";
+  const why: Record<number, string> = {
+    400: "permintaan ditolak model (400)",
+    401: "OPENROUTER_API_KEY tidak valid atau sudah dicabut (401)",
+    402: "kredit OpenRouter habis atau batas kredit kunci tercapai (402)",
+    403: "permintaan diblokir moderasi OpenRouter (403)",
+    404: "tidak ada penyedia model yang memenuhi kebijakan privasi (tanpa penyimpanan data); cek pengaturan privasi akun OpenRouter (404)",
+    408: "model terlalu lama menjawab (408)",
+    429: "terlalu banyak permintaan; tunggu sebentar (429)",
+    502: "penyedia model sedang bermasalah (502)",
+    503: "tidak ada penyedia model yang tersedia saat ini (503)",
+  };
+  return `Agen LLM gagal: ${status ? why[status] ?? `kesalahan OpenRouter (${status})` : "OpenRouter tidak dapat dihubungi"}.`;
 }
 
 function parseArgs(raw: string): Record<string, unknown> {

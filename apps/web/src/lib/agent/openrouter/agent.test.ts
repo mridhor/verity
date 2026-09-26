@@ -68,7 +68,7 @@ describe("OpenRouterAgent", () => {
     const fetcher = vi.fn().mockResolvedValue(new Response("{}", { status: 502 }));
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const events = await collect(new OpenRouterAgent(client, env, fetcher).run(input({ message: "rahasia klien" })));
-    expect(events.find((e) => e.type === "error")).toBeTruthy();
+    expect(events.find((e) => e.type === "error")).toMatchObject({ message: expect.stringContaining("(502)") });
     expect(JSON.stringify(spy.mock.calls)).not.toContain("rahasia");
     spy.mockRestore();
   });
