@@ -47,9 +47,9 @@ export function AgentToggleButton() {
   const { open, setOpen, embedded } = useAgent();
   if (embedded) return null;
   return (
-    <button type="button" onClick={() => setOpen(!open)} aria-pressed={open} title="Tanya agen (⌘J)"
+    <button type="button" onClick={() => setOpen(!open)} aria-pressed={open} title="Tanya agent (⌘J)"
       className={`inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-[13px] font-medium text-foreground shadow-card transition-colors ${open ? "bg-muted" : "bg-card hover:bg-muted"}`}>
-      <Sparkles size={14} aria-hidden /> Tanya agen
+      <Sparkles size={14} aria-hidden /> Tanya agent
       <kbd className="rounded border border-border px-1 font-sans text-[10.5px] font-normal text-subtle">⌘J</kbd>
     </button>
   );

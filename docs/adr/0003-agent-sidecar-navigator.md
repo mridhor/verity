@@ -7,7 +7,7 @@ builds the full UI, the event contract and a real approval flow, backed by a det
 scenario agent that reads real data under the user's RLS.
 
 ## Decisions
-- **One agent, three surfaces:** sidecar (topbar "Tanya agen", `⌘J`), the berkas "Percakapan" tab
+- **One agent, three surfaces:** sidecar (topbar "Tanya agent", `⌘J`), the berkas "Percakapan" tab
   with a document pane, and the navigator (`⌘K`, sidebar search box). They share threads: one per
   berkas (visible to berkas members) and private office threads per user and page context.
 - **Event contract:** `packages/schema/schemas/agent-event.schema.json`, generated to Zod and

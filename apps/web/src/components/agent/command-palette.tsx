@@ -77,7 +77,7 @@ function Palette() {
           <Search size={15} className="text-subtle" aria-hidden />
           <input ref={input} value={q} onChange={(e) => { setQ(e.target.value); setIdx(0); }} onKeyDown={onKey}
             role="combobox" aria-expanded="true" aria-controls="palette-list" aria-activedescendant={items[idx] ? `palette-${idx}` : undefined}
-            placeholder="Cari berkas, akta, orang, dokumen, atau tanya agen…"
+            placeholder="Cari berkas, akta, orang, dokumen, atau Tanya agent…"
             className="h-12 flex-1 bg-transparent text-[14px] outline-none placeholder:text-subtle" />
           <kbd className="rounded border border-border px-1.5 text-[10.5px] text-subtle">Esc</kbd>
         </div>
@@ -94,7 +94,7 @@ function Palette() {
                   {item.kind === "ask" ? (
                     <>
                       <Sparkles size={14} className="text-primary" aria-hidden />
-                      <span className="flex-1 truncate">Tanya agen: <span className="font-medium">{item.label}</span></span>
+                      <span className="flex-1 truncate">Tanya agent: <span className="font-medium">{item.label}</span></span>
                     </>
                   ) : (
                     <>
