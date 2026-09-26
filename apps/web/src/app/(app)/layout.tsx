@@ -21,14 +21,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <AgentProvider>
-    <div className="flex h-screen gap-2 bg-background p-2 pl-0">
+    <div className="flex h-screen gap-2 overflow-hidden bg-background p-2 pl-0">
       <Sidebar
         me={{ role: me.role, tenantId: me.tenantId, name: self?.display_name ?? me.email ?? "" }}
         tenantKind={tenantKind}
         berkas={berkas ?? []}
         tenants={tenants ?? []}
       />
-      <main className="flex min-w-0 flex-1 flex-col overflow-y-auto rounded-xl bg-card shadow-surface">
+      <main className="relative flex min-w-0 flex-1 flex-col overflow-y-auto rounded-xl bg-card shadow-surface">
         <Topbar unread={unread} />
         {children}
       </main>

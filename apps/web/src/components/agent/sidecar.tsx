@@ -21,7 +21,7 @@ export function AgentSidecar() {
 
   if (!visible) return null;
   return (
-    <aside aria-label="Agen" className="fixed inset-0 z-30 flex flex-col bg-card md:static md:inset-auto md:z-auto md:w-[400px] md:shrink-0 md:overflow-hidden md:rounded-xl md:shadow-surface">
+    <aside aria-label="Agen" className="fixed inset-0 z-30 flex flex-col bg-card md:relative md:inset-auto md:z-auto md:w-[400px] md:shrink-0 md:overflow-hidden md:rounded-xl md:shadow-surface">
       <div className="flex items-center gap-2.5 border-b border-border-soft px-4 py-3">
         <span className="grid size-7 place-items-center rounded-md bg-foreground font-serif text-[15px] leading-none text-card" aria-hidden>V</span>
         <div className="min-w-0 flex-1">
@@ -29,7 +29,7 @@ export function AgentSidecar() {
           <div className="truncate text-[12px] text-subtle">{context.label}</div>
         </div>
         <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground" title="Agen berbasis aturan; belum memakai model AI">
-          Mode uji
+          Beta
         </span>
         {thread.messages.length > 0 && (
           <button type="button" onClick={newThread} aria-label="Percakapan baru" title="Percakapan baru"

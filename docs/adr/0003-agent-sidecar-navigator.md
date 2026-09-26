@@ -13,7 +13,7 @@ scenario agent that reads real data under the user's RLS.
 - **Event contract:** `packages/schema/schemas/agent-event.schema.json`, generated to Zod and
   Pydantic. The future engine must emit the same events; the UI does not change.
 - **Provider switch:** `VERITY_AGENT_PROVIDER` (only `scenario` today). The scenario agent is
-  labelled "Mode uji" in the UI and says plainly when it cannot answer.
+  labelled "Beta" in the UI and says plainly when it cannot answer.
 - **Rule 1 in code and DB:** skills only get `readonlyDb` (select + the `create_proposed_changes`
   RPC). Changes are `proposed_changes`, applied only by `decide_proposed_change` after a human
   approves. Tiers: staff (`checklist.add`, `schedule.add`, `akta.submit_verification`) and Notaris
