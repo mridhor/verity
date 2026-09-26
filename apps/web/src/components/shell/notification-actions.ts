@@ -21,6 +21,7 @@ const KIND: Record<string, { label: string; tone: InboxItem["tone"] }> = {
   "akta.returned": { label: "Akta dikembalikan ke draft", tone: "neutral" },
   "akta.finalized": { label: "Akta difinalkan", tone: "success" },
   "proposal.pending": { label: "Usulan agen menunggu persetujuan", tone: "info" },
+  "agent.presigning": { label: "Pemeriksaan pra-tanda tangan", tone: "info" },
   "tenant_member.added": { label: "Pengguna baru ditambahkan ke kantor", tone: "neutral" },
   "tenant_member.updated": { label: "Peran pengguna diubah", tone: "neutral" },
   "berkas_member.changed": { label: "Keanggotaan berkas diubah", tone: "neutral" },
@@ -79,8 +80,13 @@ export async function getInbox(): Promise<{ reminders: InboxItem[]; notification
     const p = (n.payload ?? {}) as { akta_id?: string; berkas_id?: string };
     const k = KIND[n.kind] ?? { label: n.kind, tone: "neutral" as const };
     const subject = (p.akta_id && aktaTitle.get(p.akta_id)) || (p.berkas_id && berkasTitle.get(p.berkas_id)) || "";
-    const href = p.akta_id ? `/akta/${p.akta_id}` : p.berkas_id ? `/berkas/${p.berkas_id}${n.kind === "proposal.pending" ? "?tab=percakapan" : ""}` : "/beranda";
-    return { id: String(n.id), title: k.label, sub: [subject, formatDateTime(n.created_at)].filter(Boolean).join(" · "), href, tone: k.tone, unread: !n.read_at };
+    const toChat = n.kind === "proposal.pending" || n.kind === "agent.presigning";
+    const href = p.akta_id ? `/akta/${p.akta_id}` : p.berkas_id ? `/berkas/${p.berkas_id}${toChat ? "?tab=percakapan" : ""}` : "/beranda";
+    const findings = (n.payload as { findings?: number })?.findings;
+    const title = n.kind === "agent.presigning" && findings !== undefined
+      ? `${k.label}: ${findings ? `${findings} temuan` : "siap"}` : k.label;
+    const tone = n.kind === "agent.presigning" ? (findings ? "warning" : "success") : k.tone;
+    return { id: String(n.id), title, sub: [subject, formatDateTime(n.created_at)].filter(Boolean).join(" · "), href, tone, unread: !n.read_at };
   });
   return { reminders, notifications };
 }

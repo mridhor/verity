@@ -201,7 +201,6 @@ export async function readiness(c: Ctx) {
   const targets = c.context.kind === "akta" ? akta.filter((a) => a.id === (c.context as { aktaId: string }).aktaId) : akta.filter((a) => a.status !== "selesai" && a.status !== "diarsipkan");
   if (targets.length === 0) return void c.run.say(akta.length ? "Semua akta di berkas ini sudah final." : "Belum ada akta di berkas ini.");
   c.run.step("Memeriksa syarat setiap langkah");
-  const proposals: { op: string; label: string; params: Record<string, unknown> }[] = [];
   for (const a of targets) {
     const ps = parties.filter((p) => p.akta_id === a.id && p.role !== "saksi");
     const missingNik = ps.filter((p) => p.persons && !p.persons.nik);
@@ -215,17 +214,18 @@ export async function readiness(c: Ctx) {
     c.run.say(`${aktaLabel(a)} (${APPOINTMENT_LABEL[a.appointment]}) ${citeAkta(c, a)}:`);
     c.run.table(["Syarat", "Keadaan"], rows);
     const blockers = !ps.length || missingNik.length > 0;
+    // Verifying and approving an akta stay manual on the akta page (ADR 0006): no proposals here.
     if (a.status === "draft") {
-      c.run.say(blockers ? "Lengkapi pihak dan NIK dulu, lalu draft bisa diajukan untuk verifikasi." : "Draft siap diajukan untuk verifikasi. Saya siapkan usulannya di bawah.");
-      if (!blockers) proposals.push({ op: "akta.submit_verification", label: `Ajukan ${aktaLabel(a)} untuk verifikasi`, params: { akta_id: a.id } });
+      c.run.say(blockers ? "Lengkapi pihak dan NIK dulu, lalu draft bisa diajukan untuk verifikasi."
+        : "Data draft tampak lengkap. Pengajuan verifikasi dilakukan sendiri dari halaman akta setelah Anda memeriksanya.");
     } else if (a.status === "verifikasi") {
-      c.run.say(blockers ? "Masih ada kekurangan sebelum akta bisa disetujui untuk penandatanganan." : "Akta siap disetujui untuk penandatanganan. Persetujuan ini hanya dapat diberikan oleh Notaris.");
-      if (!blockers) proposals.push({ op: "akta.approve_for_signing", label: `Setujui ${aktaLabel(a)} untuk penandatanganan`, params: { akta_id: a.id } });
+      c.run.say(blockers ? "Masih ada kekurangan sebelum akta bisa disetujui untuk penandatanganan."
+        : "Data tampak lengkap. Persetujuan untuk penandatanganan diberikan Notaris langsung di halaman akta setelah memeriksanya.");
     } else if (a.status === "menunggu_ttd") {
       c.run.say("Akta menunggu tanda tangan. Setelah ditandatangani, Notaris memfinalkan dan memberi nomor dari halaman akta. Saya tidak dapat memfinalkan, memberi nomor, atau menandatangani akta.");
     }
+    if (a.status !== "menunggu_ttd") c.run.navigate(`/akta/${a.id}`, `Buka ${aktaLabel(a)}`);
   }
-  if (proposals.length) await proposeItems(c, id, proposals, "readiness");
 }
 
 export async function proposeAktaStep(c: Ctx) {

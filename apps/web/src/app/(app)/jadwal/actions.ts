@@ -43,3 +43,12 @@ export async function deleteSchedule(form: FormData): Promise<void> {
   revalidatePath("/jadwal");
   revalidatePath("/beranda");
 }
+
+/** "Periksa sekarang": the agent's pre-signing check for one signing appointment (ADR 0006). */
+export async function runPresigningCheck(form: FormData): Promise<void> {
+  await requirePrincipal();
+  const id = z.uuid().parse(form.get("id"));
+  const supabase = await createClient();
+  await supabase.rpc("run_presigning_check", { p_schedule: id });
+  revalidatePath("/jadwal");
+}

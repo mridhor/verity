@@ -128,7 +128,9 @@ def test_returned_akta_notifies_creator(world):
     assert [n["kind"] for n in world.as_(world.andi).all("select kind from public.notifications")] == ["akta.returned"]
 
 
-def test_proposal_notifies_approvers(world):
+def test_proposal_notifies_approvers(world, conn):
+    # Notaris-tier ops are off by default (ADR 0006); enable one to check who is told.
+    conn.execute("insert into public.approval_policies (op, tier, description) values ('akta.approve_for_signing', 'notaris', 'test')")
     person = world.person("Laras Anggraini")
     akta = world.akta(world.berkas_pt, parties=[person])
     world.as_(world.andi).run("select public.transition_akta_status(%s, 'verifikasi')", (akta,))

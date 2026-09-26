@@ -735,7 +735,7 @@ begin
   perform verity_seed.checklist(b, 'Persetujuan RUPS atas pengalihan saham', v_team[1], current_date + -2, true);
   perform verity_seed.checklist(b, 'Nilai transaksi dan bukti pembayaran', v_staf, current_date + 3, false);
   perform verity_seed.act(v_staf);
-  perform public.create_proposed_changes(b, jsonb_build_array(jsonb_build_object('op', 'akta.approve_for_signing', 'label', 'Setujui Akta Jual Beli Saham PT Teknologi Cerdas Abadi untuk penandatanganan', 'params', jsonb_build_object('akta_id', current_setting('verity_seed.a_40_0')))), 'demo-40-0');
+  perform public.create_proposed_changes(b, jsonb_build_array(jsonb_build_object('op', 'checklist.add', 'label', 'Tambah ke checklist: Minta daftar pemegang saham terbaru dari direksi', 'params', jsonb_build_object('title', 'Minta daftar pemegang saham terbaru dari direksi', 'due_date', (current_date + 2)::text))), 'demo-40-0');
   end if;
   if not exists (select 1 from public.berkas where tenant_id = v_tenant and title = 'Pembubaran CV Karya Bersama Mandiri') then
   b := verity_seed.berkas('pembubaran', 'Pembubaran CV Karya Bersama Mandiri', v_team[1], array[v_team[1], v_staf, v_team[2]]::uuid[], 'Pengumuman', 'aktif', now() - interval '20 days');

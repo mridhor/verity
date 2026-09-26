@@ -21,6 +21,13 @@ def items(*ops):
 CHECKLIST = {"op": "checklist.add", "label": "Tambah checklist: minta NPWP", "params": {"title": "Minta NPWP Laras"}}
 
 
+def enable_akta_ops(conn):
+    """Akta status ops are no longer agent proposals (ADR 0006). The tier machinery stays for future
+    ops, so these tests turn the old policies back on to keep exercising it."""
+    conn.execute("insert into public.approval_policies (op, tier, description) values "
+                 "('akta.submit_verification', 'staf', 'test'), ('akta.approve_for_signing', 'notaris', 'test')")
+
+
 def approve_signing(akta):
     return {"op": "akta.approve_for_signing", "label": "Setujui untuk penandatanganan", "params": {"akta_id": str(akta)}}
 
@@ -63,7 +70,8 @@ def test_messages_are_append_only(world, conn):
     conn.execute("rollback to savepoint s")
 
 
-def test_proposals_split_by_tier_and_are_idempotent(world):
+def test_proposals_split_by_tier_and_are_idempotent(world, conn):
+    enable_akta_ops(conn)
     aid = world.akta(world.berkas_pt, parties=[world.person("Rahmat Hidayat")])
     world.as_(world.andi).run("select public.transition_akta_status(%s, 'verifikasi')", (aid,))
     andi = world.as_(world.andi)
@@ -98,7 +106,8 @@ def test_staff_approves_staff_tier_and_it_applies_once(world):
     assert andi.one("select count(*) from public.approvals") == 1
 
 
-def test_notaris_tier_needs_notaris_with_mfa(world):
+def test_notaris_tier_needs_notaris_with_mfa(world, conn):
+    enable_akta_ops(conn)
     aid = world.akta(world.berkas_pt, parties=[world.person("Rahmat Hidayat")])
     world.as_(world.andi).run("select public.transition_akta_status(%s, 'verifikasi')", (aid,))
     (pid,) = propose(world.as_(world.andi), world.berkas_pt, [approve_signing(aid)])
@@ -113,7 +122,8 @@ def test_notaris_tier_needs_notaris_with_mfa(world):
     assert world.as_(world.sari).one("select status::text from public.akta where id = %s", (aid,)) == "menunggu_ttd"
 
 
-def test_changed_target_makes_proposal_stale(world):
+def test_changed_target_makes_proposal_stale(world, conn):
+    enable_akta_ops(conn)
     aid = world.akta(world.berkas_pt, parties=[world.person("Rahmat Hidayat")])
     world.as_(world.andi).run("select public.transition_akta_status(%s, 'verifikasi')", (aid,))
     (pid,) = propose(world.as_(world.andi), world.berkas_pt, [approve_signing(aid)])
@@ -131,7 +141,8 @@ def test_reject_changes_nothing(world):
     assert andi.one("select public.decide_proposed_change(%s, 'approve')", (pid,)) == "rejected"
 
 
-def test_one_failing_item_rolls_back_the_whole_proposal(world):
+def test_one_failing_item_rolls_back_the_whole_proposal(world, conn):
+    enable_akta_ops(conn)
     andi = world.as_(world.andi)
     aid = world.akta(world.berkas_pt, parties=[world.person("Rahmat Hidayat")])
     submit = {"op": "akta.submit_verification", "label": "Ajukan verifikasi", "params": {"akta_id": str(aid)}}

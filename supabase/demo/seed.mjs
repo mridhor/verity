@@ -272,7 +272,7 @@ addCase("jual_beli_saham", "Jual Beli Saham PT Teknologi Cerdas Abadi", [{
 }], { days: 15, pic: "v_team[1]", step: "Draft akta",
   checklist: [["Bukti pengumuman rencana pengambilalihan di surat kabar", -5, true], ["Persetujuan RUPS atas pengalihan saham", -2, true],
     ["Nilai transaksi dan bukti pembayaran", 3, false]],
-  proposals: [[{ op: "akta.approve_for_signing", label: "Setujui Akta Jual Beli Saham PT Teknologi Cerdas Abadi untuk penandatanganan" }]] });
+  proposals: [[{ op: "checklist.add", label: "Tambah ke checklist: Minta daftar pemegang saham terbaru dari direksi", title: "Minta daftar pemegang saham terbaru dari direksi", due: 2 }]] });
 
 addCase("pembubaran", "Pembubaran CV Karya Bersama Mandiri", [{
   appointment: "notaris", type: "Pembubaran", title: "Akta Pembubaran CV Karya Bersama Mandiri", status: "draft",

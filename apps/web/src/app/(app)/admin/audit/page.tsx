@@ -18,7 +18,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
   const { modul, q } = await searchParams;
   const supabase = await createClient();
   const mod = AUDIT_MODULES.find((m) => m.id === modul);
-  let query = supabase.from("audit_log").select("id, occurred_at, actor_type, actor_user_id, action, target_type, berkas_id, details")
+  let query = supabase.from("audit_log").select("id, occurred_at, actor_type, actor_user_id, on_behalf_of, action, target_type, berkas_id, details")
     .order("id", { ascending: false }).limit(500);
   if (mod) query = query.or(mod.prefixes.map((p) => `action.like.${p}*`).join(","));
   const [{ data: rows }, { data: colleagues }, { data: berkas }, chain, { count: total }] = await Promise.all([
@@ -71,8 +71,9 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                 <td className={`${td} tabular-nums text-subtle`}>{r.id}</td>
                 <td className={`${td} tabular-nums text-muted-foreground whitespace-nowrap`}>{formatDateTime(r.occurred_at)}</td>
                 <td className={td}>
-                  {nameOf.get(r.actor_user_id ?? "") ?? "—"}{" "}
-                  <span className="text-[11.5px] text-subtle">({ACTOR[r.actor_type as keyof typeof ACTOR]})</span>
+                  {r.actor_type === "agent"
+                    ? <>Agen <span className="text-[11.5px] text-subtle">(atas nama {nameOf.get(r.on_behalf_of ?? "") ?? "—"})</span></>
+                    : <>{nameOf.get(r.actor_user_id ?? "") ?? "—"}{" "}<span className="text-[11.5px] text-subtle">({ACTOR[r.actor_type as keyof typeof ACTOR]})</span></>}
                 </td>
                 <td className={td}>{auditLabel(r.action)}</td>
                 <td className={`${td} text-[12.5px] text-muted-foreground`}>{auditDetail(r.action, r.details) || <span className="text-subtle">—</span>}</td>

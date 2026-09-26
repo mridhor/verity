@@ -42,6 +42,8 @@ const LABELS: Record<string, string> = {
   "proposal.created": "Agen mengusulkan perubahan",
   "proposal.approved": "Menyetujui usulan agen",
   "proposal.rejected": "Menolak usulan agen",
+  "proposal.stale": "Usulan agen kedaluwarsa karena data berubah",
+  "agent.presigning_checked": "Agen memeriksa kesiapan penandatanganan",
 };
 
 export const auditLabel = (action: string) => LABELS[action] ?? action;
@@ -55,7 +57,7 @@ export const AUDIT_MODULES: { id: string; label: string; prefixes: string[] }[] 
   { id: "jadwal", label: "Jadwal", prefixes: ["schedules."] },
   { id: "protokol", label: "Protokol", prefixes: ["protokol_transfers."] },
   { id: "hukum", label: "Dasar hukum", prefixes: ["legal_references.", "legal."] },
-  { id: "agen", label: "Usulan agen", prefixes: ["proposal."] },
+  { id: "agen", label: "Agen", prefixes: ["proposal.", "agent."] },
   { id: "pengguna", label: "Pengguna", prefixes: ["tenant_member.", "tenant.", "tenant_settings.", "official."] },
   { id: "auth", label: "Autentikasi", prefixes: ["auth.", "session."] },
 ];
@@ -86,6 +88,10 @@ export function auditDetail(action: string, details: unknown): string {
   if (action.startsWith("tenant_member.") && d.role) return `${ROLE[String(d.role)] ?? d.role}${d.active === false ? " · nonaktif" : ""}`;
   if (action === "tenant_settings.updated") return `Sesi ${d.session_timeout_hours} jam${d.annual_akta_target ? ` · target ${d.annual_akta_target}` : ""}`;
   if (action === "session.revoked_all") return `${d.sessions ?? 0} sesi dicabut`;
+  if (action === "agent.presigning_checked") {
+    const stage = d.stage === "h3" ? "H-3" : d.stage === "h1" ? "H-1" : "manual";
+    return `${stage} · ${d.findings ?? 0} temuan${d.proposals ? ` · ${d.proposals} usulan` : ""}`;
+  }
   if (action.startsWith("auth.")) return d.aal === "aal2" ? "Dengan 2FA" : "";
   if (action === "official.upserted" && d.appointment) return String(d.appointment).toUpperCase();
   if (Array.isArray(d.changed)) {

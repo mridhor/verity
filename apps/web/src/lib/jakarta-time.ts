@@ -26,3 +26,6 @@ const longDateFmt = new Intl.DateTimeFormat("id-ID", {
 
 export const formatTime = (iso: string) => timeFmt.format(new Date(iso));
 export const formatLongDate = (date: string) => longDateFmt.format(new Date(`${date}T12:00:00+07:00`));
+
+/** True when the instant is still ahead (server time). */
+export const isUpcoming = (iso: string) => new Date(iso).getTime() > Date.now();
