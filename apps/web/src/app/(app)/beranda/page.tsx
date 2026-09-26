@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, CalendarDays, FileSignature, ListChecks, Sparkles } from "lucide-react";
 import { AgentPageContext } from "@/components/agent/agent-provider";
+import { MonthlyAktaChart, type MonthCount } from "@/components/charts/monthly-akta-chart";
 import { PageHeader } from "@/components/shell/page-header";
 import { AKTA_STATUS_TONE, Badge } from "@/components/ui/badge";
 import { EmptyState, Section, StatCard } from "@/components/ui/blocks";
@@ -12,7 +13,6 @@ import { cn, formatDateTime } from "@/lib/utils";
 
 export const metadata = { title: "Beranda" };
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 const STATUS_BAR: Record<AktaStatus, string> = {
   draft: "bg-[#cfccc3]", verifikasi: "bg-info", menunggu_ttd: "bg-warning", selesai: "bg-success", diarsipkan: "bg-muted-foreground",
 };
@@ -46,7 +46,7 @@ export default async function BerandaPage() {
   // Proposals this user may decide: Notaris and Partner decide both tiers, other members the staff tier.
   const tiers = me.role === "notaris" || me.role === "partner" ? ["staf", "notaris"] : ["staf"];
   const [finals, statusRows, recent, schedules, docs, minuta, protokol, pending, dueItems, settings, self] = await Promise.all([
-    supabase.from("akta").select("akta_date").gte("akta_date", from).in("status", ["selesai", "diarsipkan"]),
+    supabase.from("akta").select("akta_date, appointment").gte("akta_date", from).in("status", ["selesai", "diarsipkan"]),
     supabase.from("akta").select("status"),
     supabase.from("akta").select("id, title, akta_type, status, number, number_period, updated_at, akta_parties(sort_order, role, persons(full_name), companies(name, legal_form))")
       .order("updated_at", { ascending: false }).limit(6),
@@ -67,19 +67,18 @@ export default async function BerandaPage() {
     id: string; tier: string; items: { label: string }[]; created_at: string; berkas: { id: string; title: string } | null;
   }[];
 
-  const perMonth = Array.from({ length: 12 }, () => 0);
+  const perMonth: MonthCount[] = Array.from({ length: 12 }, () => ({ notaris: 0, ppat: 0 }));
   let thisMonth = 0;
   let lastMonth = 0;
   let thisYear = 0;
   for (const r of finals.data ?? []) {
     const d = String(r.akta_date);
-    if (d >= yearStart) { perMonth[Number(d.slice(5, 7)) - 1]! += 1; thisYear++; }
+    if (d >= yearStart) { perMonth[Number(d.slice(5, 7)) - 1]![r.appointment === "ppat" ? "ppat" : "notaris"] += 1; thisYear++; }
     if (d >= monthStart) thisMonth++;
     else if (d >= prevMonthStart) lastMonth++;
   }
   const change = lastMonth === 0 ? null : Math.round(((thisMonth - lastMonth) / lastMonth) * 100);
   const target = settings.data?.annual_akta_target ?? null;
-  const peak = Math.max(1, ...perMonth);
   const byStatus = Object.fromEntries(AKTA_STATUSES.map((s) => [s, 0])) as Record<AktaStatus, number>;
   for (const r of statusRows.data ?? []) byStatus[r.status as AktaStatus]++;
   const totalAkta = Object.values(byStatus).reduce((a, b) => a + b, 0);
@@ -166,28 +165,14 @@ export default async function BerandaPage() {
         )}
 
         <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
-          <Section title={`Akta final per bulan — ${today.year}`}
+          <Section title={`Akta final per bulan — ${today.year}`} description="Menurut tanggal akta, dipisah per jenis pengangkatan"
             actions={target ? <span className="text-[12.5px] text-subtle tabular-nums">{thisYear} / {target} target</span> : undefined}>
             {target && (
               <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-muted" aria-label={`${thisYear} dari target ${target}`}>
                 <div className="h-full rounded-full bg-foreground" style={{ width: `${Math.min(100, (thisYear / target) * 100)}%` }} />
               </div>
             )}
-            <div className="relative h-48" role="img" aria-label={`Jumlah akta final per bulan tahun ${today.year}`}>
-              {[0.25, 0.5, 0.75, 1].map((f) => (
-                <div key={f} aria-hidden className="absolute inset-x-0 border-t border-dashed border-border-soft" style={{ bottom: `${22 + f * 140}px` }} />
-              ))}
-              <div className="absolute inset-0 flex items-end gap-2.5">
-                {perMonth.map((n, i) => (
-                  <div key={MONTHS[i]} className="flex flex-1 flex-col items-center justify-end gap-1.5">
-                    <span className="text-[11px] tabular-nums text-subtle">{n || ""}</span>
-                    <div className={cn("w-full max-w-7 rounded-t-md", i + 1 === today.month ? "bg-foreground" : i + 1 < today.month ? "bg-[#d8d5cc]" : "bg-muted")}
-                      style={{ height: `${Math.max(3, (n / peak) * 140)}px` }} />
-                    <span className={cn("text-[11px]", i + 1 === today.month ? "font-medium text-foreground" : "text-subtle")}>{MONTHS[i]}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <MonthlyAktaChart data={perMonth} year={today.year} currentMonth={today.month} />
           </Section>
           <Section title="Status akta" description={`${totalAkta} akta di kantor`}>
             {totalAkta === 0 ? (
