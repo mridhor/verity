@@ -1,3 +1,5 @@
+import { PRESIGNING_STAGE_LABEL } from "@/lib/labels";
+
 const LABELS: Record<string, string> = {
   "berkas.created": "Membuat berkas",
   "berkas_member.added": "Menambahkan anggota berkas",
@@ -89,7 +91,7 @@ export function auditDetail(action: string, details: unknown): string {
   if (action === "tenant_settings.updated") return `Sesi ${d.session_timeout_hours} jam${d.annual_akta_target ? ` · target ${d.annual_akta_target}` : ""}`;
   if (action === "session.revoked_all") return `${d.sessions ?? 0} sesi dicabut`;
   if (action === "agent.presigning_checked") {
-    const stage = d.stage === "h3" ? "H-3" : d.stage === "h1" ? "H-1" : "manual";
+    const stage = PRESIGNING_STAGE_LABEL[String(d.stage)] ?? "manual";
     return `${stage} · ${d.findings ?? 0} temuan${d.proposals ? ` · ${d.proposals} usulan` : ""}`;
   }
   if (action.startsWith("auth.")) return d.aal === "aal2" ? "Dengan 2FA" : "";

@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
+import { agentActionSchema } from "@verity/schema-ts";
 import { contextKey } from "@/lib/agent/context-key";
 import { getAgentProvider } from "@/lib/agent/providers";
 import { encodeSse } from "@/lib/agent/sse";
-import type { AgentContext, AgentEvent } from "@/lib/agent/types";
+import type { AgentAction, AgentContext, AgentEvent } from "@/lib/agent/types";
 import { getPrincipal, needsMfa } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -12,7 +13,11 @@ const contextSchema = z.union([
   z.object({ kind: z.literal("berkas"), label: z.string().max(200), berkasId: z.uuid() }),
   z.object({ kind: z.literal("akta"), label: z.string().max(200), berkasId: z.uuid(), aktaId: z.uuid() }),
 ]);
-const bodySchema = z.object({ threadId: z.uuid().optional(), message: z.string().trim().min(1).max(2000), context: contextSchema });
+const bodySchema = z.object({
+  threadId: z.uuid().optional(), message: z.string().trim().min(1).max(2000), context: contextSchema,
+  /** The answer to a widget; `message` is its readable summary, stored as the user's message. */
+  action: agentActionSchema.optional(),
+});
 
 /**
  * POST /api/agent — one agent turn, streamed as SSE. Identity comes only from the verified
@@ -25,7 +30,7 @@ export async function POST(request: NextRequest) {
   if (needsMfa(me)) return NextResponse.json({ error: "Verifikasi dua langkah diperlukan." }, { status: 403 });
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Permintaan tidak valid." }, { status: 400 });
-  const { message, context } = parsed.data as { message: string; context: AgentContext; threadId?: string };
+  const { message, context, action } = parsed.data as { message: string; context: AgentContext; threadId?: string; action?: AgentAction };
   const supabase = await createClient();
 
   let threadId = parsed.data.threadId;
@@ -50,7 +55,7 @@ export async function POST(request: NextRequest) {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
-        for await (const event of provider.run({ threadId: threadId!, userMessageId: userMsg.id as number, message, context })) {
+        for await (const event of provider.run({ threadId: threadId!, userMessageId: userMsg.id as number, message, context, ...(action ? { action } : {}) })) {
           if (event.type !== "step" || event.status !== "running") events.push(event);
           controller.enqueue(encoder.encode(encodeSse(event)));
         }

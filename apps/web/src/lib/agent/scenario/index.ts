@@ -4,7 +4,7 @@ import { readonlyDb } from "../readonly-db";
 import type { AgentEvent, AgentProvider, AgentRunInput } from "../types";
 import { matchIntent } from "./intents";
 import { RunBuilder, withSeq } from "./run";
-import { runIntent } from "./skills";
+import { runAction, runIntent } from "./skills";
 
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -22,9 +22,11 @@ export class ScenarioAgent implements AgentProvider {
     // First event immediately (NFR-PERF-01), before any database work.
     yield { type: "step", seq: 0, id: "s0", label: "Memahami pertanyaan", status: "running" };
     const db = readonlyDb(this.client);
-    const run = new RunBuilder();
+    const run = new RunBuilder(`${input.userMessageId}-`);
     try {
-      await runIntent({ db, run, input, context: input.context }, matchIntent(input.message, input.context));
+      const c = { db, run, input, context: input.context };
+      if (input.action) await runAction(c, input.action);
+      else await runIntent(c, matchIntent(input.message, input.context));
       const events = withSeq([{ type: "step", id: "s0", label: "Memahami pertanyaan", status: "done" }, ...(await run.events(db))], 1);
       for (const e of events) {
         yield e;

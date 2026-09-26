@@ -114,3 +114,6 @@ export function formatBytes(n: number): string {
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
+
+/** Background pre-signing check stages (ADR 0006). */
+export const PRESIGNING_STAGE_LABEL: Record<string, string> = { awal: "awal", h3: "H-3", h1: "H-1", manual: "manual" };

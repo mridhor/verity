@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { agentEventSchema } from "@verity/schema-ts";
 import { contextKey } from "@/lib/agent/context-key";
 import { createSseParser } from "@/lib/agent/sse";
-import type { AgentContext, AgentEvent, CitationTarget } from "@/lib/agent/types";
+import type { AgentAction, AgentContext, AgentEvent, CitationTarget } from "@/lib/agent/types";
 import { loadThread, type StoredMessage } from "./actions";
 
 export type UiMessage = StoredMessage & { streaming?: boolean };
@@ -25,7 +25,8 @@ type AgentApi = {
   setPaletteOpen: (v: boolean) => void;
   setEmbedded: (v: boolean) => void;
   register: (r: Registered | null) => void;
-  send: (text: string) => Promise<void>;
+  /** `action` answers a widget; `text` is its readable summary. */
+  send: (text: string, action?: AgentAction) => Promise<void>;
   newThread: () => void;
   /** Where a citation click goes. The berkas workspace overrides it to open the document pane. */
   onCite: (target: CitationTarget) => void;
@@ -103,7 +104,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     setThreads((s) => ({ ...s, [k]: fn(s[k] ?? { threadId: null, messages: [], loaded: true }) }));
   }, []);
 
-  const send = useCallback(async (text: string) => {
+  const send = useCallback(async (text: string, action?: AgentAction) => {
     const message = text.trim();
     if (!message || busy) return;
     const k = key;
@@ -122,7 +123,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch("/api/agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ threadId: tid, message, context: ctx }),
+        body: JSON.stringify({ threadId: tid, message, context: ctx, ...(action ? { action } : {}) }),
       });
       const newThreadId = res.headers.get("X-Agent-Thread");
       if (newThreadId) patch(k, (t) => ({ ...t, threadId: newThreadId }));

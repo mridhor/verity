@@ -7,8 +7,9 @@ import { EmptyState, FilterChips } from "@/components/ui/blocks";
 import { Button } from "@/components/ui/button";
 import { requirePrincipal } from "@/lib/auth";
 import { formatLongDate, formatTime, isUpcoming, jakartaDateOf, jakartaInstant, jakartaToday } from "@/lib/jakarta-time";
-import { SCHEDULE_KINDS, SCHEDULE_KIND_LABEL, type ScheduleKind } from "@/lib/labels";
+import { PRESIGNING_STAGE_LABEL, SCHEDULE_KINDS, SCHEDULE_KIND_LABEL, type ScheduleKind } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/server";
+import { formatDateTime } from "@/lib/utils";
 import { deleteSchedule, runPresigningCheck } from "./actions";
 import { ScheduleForm } from "./schedule-form";
 import { AgentPageContext } from "@/components/agent/agent-provider";
@@ -91,12 +92,12 @@ export default async function JadwalPage({ searchParams }: { searchParams: Promi
                             {run ? (
                               <Link href={`/berkas/${b.id}?tab=percakapan`} title="Buka hasil pemeriksaan agen">
                                 <Badge tone={run.findings ? "warning" : "success"}>
-                                  {run.findings ? `${run.findings} temuan` : "Siap"} · diperiksa {formatTime(run.ran_at)}
-                                  {run.stage !== "manual" && ` (${run.stage === "h3" ? "H-3" : "H-1"})`}
+                                  {run.findings ? `${run.findings} temuan` : "Siap"} · diperiksa {jakartaDateOf(run.ran_at) === today ? formatTime(run.ran_at) : formatDateTime(run.ran_at)}
+                                  {run.stage !== "manual" && ` (${PRESIGNING_STAGE_LABEL[run.stage] ?? run.stage})`}
                                 </Badge>
                               </Link>
                             ) : (
-                              <span className="text-[12px] text-subtle">Agen memeriksa otomatis H-3 dan H-1.</span>
+                              <span className="text-[12px] text-subtle">Agen memeriksa saat dijadwalkan, lalu H-3 dan H-1.</span>
                             )}
                             <form action={runPresigningCheck}>
                               <input type="hidden" name="id" value={j.id} />

@@ -82,7 +82,7 @@ export function Conversation({ compact }: { compact?: boolean }) {
             <div className="mt-1.5 text-[11.5px] text-subtle">{m.author}, {m.createdAt}</div>
           </div>
         ) : (
-          <AgentMessage key={m.id} message={m} compact={compact} />
+          <AgentMessage key={m.id} message={m} compact={compact} latest={m === last} />
         ))}
         <div ref={end} />
       </div>

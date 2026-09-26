@@ -17,6 +17,14 @@ decided that verifying an akta and acting on it are sensitive and stay manual fo
   - Moving the appointment gives a new signing time, which is checked again.
   - Members can also run a check from the schedule ("Periksa sekarang",
     `public.run_presigning_check`).
+  - **First check when the signing is scheduled ("awal").** A deferred constraint trigger on
+    `schedules` checks a new or moved signing when its transaction commits. That covers a proposal
+    approved in chat, the Jadwal dialog and the seed alike. A signing more than 72 hours away gets
+    stage `awal`; a nearer one gets the current H-3 or H-1, so the hourly job does not repeat it.
+    A failed check never undoes the schedule.
+  - **Scheduling from chat anywhere.** From the office view, "jadwalkan penandatanganan AJB
+    Kebagusan tanggal 10 Oktober 10.00" finds the active berkas by the words of its title (under
+    RLS). The Notaris can approve it in the chat, even from home, and the check starts on approval.
 - **What is checked (data only, no legal rules, rule 8):**
   - akta that are not final yet (their status is reported, never changed)
   - parties with no NIK, address or NIB

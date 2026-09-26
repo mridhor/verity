@@ -1,8 +1,11 @@
-import type { AgentEventSchema } from "@verity/schema-ts";
+import type { AgentActionSchema, AgentEventSchema } from "@verity/schema-ts";
 
 /** One event of an agent run; same contract as the future engine (packages/schema/schemas/agent-event.schema.json). */
 export type AgentEvent = AgentEventSchema;
 export type CitationTarget = Extract<AgentEvent, { type: "citation" }>["target"];
+export type Widget = Extract<AgentEvent, { type: "widget" }>["widget"];
+/** The user's answer to a widget (packages/schema/schemas/agent-action.schema.json). */
+export type AgentAction = AgentActionSchema;
 export type AgentEventInput = AgentEvent extends infer E ? (E extends { seq: number } ? Omit<E, "seq"> : never) : never;
 
 /** Where the user is asking from. Pages register this; the agent scopes its answers to it. */
@@ -16,6 +19,8 @@ export type AgentRunInput = {
   userMessageId: number;
   message: string;
   context: AgentContext;
+  /** Present when the message answers a widget; handled deterministically, never by a model. */
+  action?: AgentAction;
 };
 
 export interface AgentProvider {

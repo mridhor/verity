@@ -82,9 +82,10 @@ export async function getInbox(): Promise<{ reminders: InboxItem[]; notification
     const subject = (p.akta_id && aktaTitle.get(p.akta_id)) || (p.berkas_id && berkasTitle.get(p.berkas_id)) || "";
     const toChat = n.kind === "proposal.pending" || n.kind === "agent.presigning";
     const href = p.akta_id ? `/akta/${p.akta_id}` : p.berkas_id ? `/berkas/${p.berkas_id}${toChat ? "?tab=percakapan" : ""}` : "/beranda";
-    const findings = (n.payload as { findings?: number })?.findings;
+    const { findings, stage } = (n.payload ?? {}) as { findings?: number; stage?: string };
+    const label = n.kind === "agent.presigning" && stage === "awal" ? "Penandatanganan dijadwalkan" : k.label;
     const title = n.kind === "agent.presigning" && findings !== undefined
-      ? `${k.label}: ${findings ? `${findings} temuan` : "siap"}` : k.label;
+      ? `${label}: ${findings ? `${findings} temuan` : "siap"}` : label;
     const tone = n.kind === "agent.presigning" ? (findings ? "warning" : "success") : k.tone;
     return { id: String(n.id), title, sub: [subject, formatDateTime(n.created_at)].filter(Boolean).join(" · "), href, tone, unread: !n.read_at };
   });

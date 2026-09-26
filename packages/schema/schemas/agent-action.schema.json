@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://verity.local/schemas/agent-action.schema.json",
+  "title": "AgentAction",
+  "description": "The user's answer to a WidgetEvent, sent with the next message. Handled deterministically, never by a model.",
+  "anyOf": [
+    {
+      "$ref": "#/$defs/ScheduleAction"
+    },
+    {
+      "$ref": "#/$defs/ChecklistAction"
+    },
+    {
+      "$ref": "#/$defs/PickBerkasAction"
+    },
+    {
+      "$ref": "#/$defs/ChecklistBatchAction"
+    }
+  ],
+  "$defs": {
+    "ScheduleAction": {
+      "title": "ScheduleAction",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "schedule_form"
+        },
+        "widgetId": {
+          "type": "string"
+        },
+        "berkasId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "time": {
+          "type": "string",
+          "pattern": "^\\d{2}:\\d{2}$"
+        },
+        "scheduleKind": {
+          "type": "string",
+          "enum": [
+            "pertemuan_klien",
+            "penandatanganan",
+            "internal"
+          ]
+        },
+        "location": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "title": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 200
+        }
+      },
+      "required": [
+        "kind",
+        "widgetId",
+        "berkasId",
+        "date",
+        "time",
+        "scheduleKind",
+        "title"
+      ],
+      "additionalProperties": false
+    },
+    "ChecklistAction": {
+      "title": "ChecklistAction",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "checklist_form"
+        },
+        "widgetId": {
+          "type": "string"
+        },
+        "berkasId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 200
+        },
+        "dueDate": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      "required": [
+        "kind",
+        "widgetId",
+        "berkasId",
+        "title"
+      ],
+      "additionalProperties": false
+    },
+    "PickBerkasAction": {
+      "title": "PickBerkasAction",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "berkas_picker"
+        },
+        "widgetId": {
+          "type": "string"
+        },
+        "berkasId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "then": {
+          "type": "string",
+          "enum": [
+            "schedule",
+            "summary",
+            "kelengkapan",
+            "readiness"
+          ]
+        },
+        "text": {
+          "type": "string",
+          "maxLength": 2000
+        }
+      },
+      "required": [
+        "kind",
+        "widgetId",
+        "berkasId",
+        "then",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "ChecklistBatchAction": {
+      "title": "ChecklistBatchAction",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "checklist_batch"
+        },
+        "widgetId": {
+          "type": "string"
+        },
+        "berkasId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 200
+              },
+              "dueDate": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              }
+            },
+            "required": [
+              "title"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "kind",
+        "widgetId",
+        "berkasId",
+        "items"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

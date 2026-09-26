@@ -6,10 +6,10 @@ export type Intent =
   | { name: "propose_checklist"; text: string }
   | { name: "propose_schedule"; text: string }
   | { name: "propose_akta_step" }
-  | { name: "kelengkapan" }
-  | { name: "readiness" }
+  | { name: "kelengkapan"; text?: string }
+  | { name: "readiness"; text?: string }
   | { name: "parties" }
-  | { name: "summary" }
+  | { name: "summary"; text?: string }
   | { name: "akta_by_status"; status: "draft" | "verifikasi" | "menunggu_ttd" | "selesai" | "diarsipkan" }
   | { name: "akta_final_period"; period: "bulan" | "tahun" }
   | { name: "schedules"; range: "hari_ini" | "besok" | "minggu" }
@@ -30,19 +30,20 @@ export function matchIntent(raw: string, ctx: AgentContext): Intent {
   let m = t.match(/^(?:buka|pergi ke|ke halaman|ke|tampilkan halaman)\s+(.+)$/);
   if (m) return { name: "navigate", target: m[1]! };
 
-  m = t.match(/(?:tambah(?:kan)?|buat(?:kan)?|catat(?:kan)?)\s+(?:item\s+)?checklist\s*:?\s*(.+)$/);
+  m = t.match(/(?:tambah(?:kan)?|buat(?:kan)?|catat(?:kan)?)\s+(?:item\s+)?checklist\b\s*:?\s*(.*)$/);
   if (m) return { name: "propose_checklist", text: m[1]! };
 
-  if (/^(jadwalkan|buat(?:kan)? jadwal|tambah(?:kan)? jadwal|atur jadwal)\b/.test(t)) {
-    return { name: "propose_schedule", text: t.replace(/^(jadwalkan|buat(?:kan)? jadwal|tambah(?:kan)? jadwal|atur jadwal)\s*/, "") };
-  }
+  const SCHEDULE = /^(?:(?:tolong|mohon|bisa)\s+)?(?:jadwalkan|buat(?:kan)? jadwal|tambah(?:kan)? jadwal|atur jadwal|atur(?=\s+(?:penandatanganan|ttd|tanda ?tangan)))\s*/;
+  if (SCHEDULE.test(t)) return { name: "propose_schedule", text: t.replace(SCHEDULE, "") };
 
   if (/(ajukan|setujui|naikkan|lanjutkan).*(verifikasi|tanda ?tangan|ttd|status)/.test(t)) return { name: "propose_akta_step" };
 
+  // From the office view these need the berkas named: "cek kelengkapan berkas Arunika".
+  const namesBerkas = ctx.kind !== "kantor" || /\bberkas\s+\S{3,}/.test(t);
   if (/(cek|periksa|check).*(kelengkapan|konsistensi|dokumen|data)|dokumen.*(kurang|lengkap)|apa (saja )?yang kurang(?!.*final)/.test(t)
-      && ctx.kind !== "kantor") return { name: "kelengkapan" };
+      && namesBerkas) return { name: "kelengkapan", text: t };
 
-  if (/(kurang|siap|syarat|bisa).*(final|difinalkan|tanda ?tangan|ttd)/.test(t)) return { name: "readiness" };
+  if (/(kurang|siap|syarat|bisa).*(final|difinalkan|tanda ?tangan|ttd)/.test(t)) return { name: "readiness", text: t };
 
   if (/(siapa|daftar|sebutkan).*(penghadap|pihak|pendiri|para pihak)/.test(t)) return { name: "parties" };
 
@@ -76,7 +77,7 @@ export function matchIntent(raw: string, ctx: AgentContext): Intent {
   if (m) return { name: "search", query: m[1]!.replace(/\s+(di\s+)?(klapper|kantor)$/, "") };
   if (/klapper/.test(t)) return { name: "search", query: t.replace(/.*klapper\s*/, "") };
 
-  if (/(ringkas|ringkasan|status|gambaran|bagaimana|progres|perkembangan)/.test(t) && ctx.kind !== "kantor") return { name: "summary" };
+  if (/(ringkas|ringkasan|status|gambaran|bagaimana|progres|perkembangan)/.test(t) && namesBerkas) return { name: "summary", text: t };
 
   return { name: "fallback" };
 }

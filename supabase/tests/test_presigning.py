@@ -148,3 +148,75 @@ def test_hook_drops_forged_agent_claim(world, conn):
     out = conn.execute("select public.custom_access_token_hook(%s::jsonb) as e", (json.dumps(event),)).fetchone()["e"]
     conn.execute("reset role")
     assert "verity_actor" not in out["claims"]
+
+
+# ─────────────────────────────  Checked as soon as a signing is scheduled  ─────────────────────────────
+
+def commit_point(conn):
+    """Deferred triggers fire here, as they would at commit."""
+    conn.execute("set constraints all immediate")
+    conn.execute("set constraints all deferred")
+
+
+def runs(conn):
+    return [r["stage"] for r in conn.execute("select stage from public.agent_background_runs order by id").fetchall()]
+
+
+def test_signing_far_ahead_gets_a_first_check_on_commit(world, conn, case):
+    signing(world, conn, world.berkas_pt, 24 * 10)
+    assert runs(conn) == []                     # nothing until the transaction commits
+    commit_point(conn)
+    assert runs(conn) == ["awal"]
+    texts = " ".join(e["delta"] for e in world.as_(world.andi).one(
+        "select m.events from public.agent_messages m where m.role = 'agent'") if e["type"] == "text")
+    assert "Penandatanganan sudah dijadwalkan. Pemeriksaan awal" in texts
+    assert world.as_(world.sari).one("select count(*) from public.notifications where kind = 'agent.presigning'") == 1
+    assert run_all(conn) == 0                   # the hourly job does not repeat it (still > 72h)
+
+
+def test_signing_soon_takes_the_current_stage_and_the_job_does_not_repeat_it(world, conn, case):
+    signing(world, conn, world.berkas_pt, 20)
+    commit_point(conn)
+    assert runs(conn) == ["h1"]
+    assert run_all(conn) == 0
+
+
+def test_moving_a_signing_checks_it_again(world, conn, case):
+    sid = signing(world, conn, world.berkas_pt, 24 * 10)
+    commit_point(conn)
+    conn.execute("update public.schedules set starts_at = now() + interval '5 days' where id = %s", (sid,))
+    conn.execute("update public.schedules set title = 'Penandatanganan AJB' where id = %s", (sid,))  # no new time
+    commit_point(conn)
+    assert runs(conn) == ["awal", "awal"]
+
+
+def test_other_kinds_office_agenda_and_past_are_not_checked_on_commit(world, conn, case):
+    signing(world, conn, world.berkas_pt, 24 * 10, kind="pertemuan_klien")
+    signing(world, conn, world.berkas_pt, -2)
+    conn.execute(
+        "insert into public.schedules (tenant_id, kind, title, starts_at, created_by) "
+        "values (%s, 'penandatanganan', 'Tanpa berkas', now() + interval '5 days', %s)", (world.notary, world.andi))
+    commit_point(conn)
+    assert runs(conn) == []
+
+
+def test_a_failed_check_keeps_the_schedule(world, conn, case):
+    conn.execute("alter table public.agent_background_runs add constraint no_runs check (false) not valid")
+    sid = signing(world, conn, world.berkas_pt, 24 * 10)
+    commit_point(conn)
+    assert conn.execute("select count(*) as n from public.schedules where id = %s", (sid,)).fetchone()["n"] == 1
+    assert runs(conn) == []
+
+
+def test_signing_booked_from_chat_is_checked_once_approved(world, conn, case):
+    item = {"op": "schedule.add", "label": "Jadwalkan penandatanganan",
+            "params": {"title": "Penandatanganan akta", "kind": "penandatanganan",
+                       "starts_at": conn.execute("select (now() + interval '10 days')::text as t").fetchone()["t"]}}
+    sari = world.as_(world.sari)
+    (pid,) = [r["create_proposed_changes"] for r in sari.all("select * from public.create_proposed_changes(%s, %s::jsonb, %s)",
+                                                             (world.berkas_pt, json.dumps([item]), f"k-{uuid.uuid4()}"))]
+    commit_point(conn)
+    assert runs(conn) == []                     # a proposal is not a schedule
+    assert sari.one("select public.decide_proposed_change(%s, 'approve')", (pid,)) == "applied"
+    commit_point(conn)
+    assert runs(conn) == ["awal"]

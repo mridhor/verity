@@ -20,7 +20,11 @@ describe("matchIntent", () => {
     ["dasar hukum fidusia", kantor, "legal"],
     ["buka berkas Sinar Kopi", kantor, "navigate"],
     ["tambahkan checklist minta NPWP Laras, tenggat Senin", berkas, "propose_checklist"],
+    ["tambahkan checklist", berkas, "propose_checklist"],
     ["jadwalkan penandatanganan besok 14.00", berkas, "propose_schedule"],
+    ["jadwalkan penandatanganan AJB Kebagusan tanggal 10 Oktober 10.00", kantor, "propose_schedule"],
+    ["tolong jadwalkan TTD hibah mampang jumat 09.00", kantor, "propose_schedule"],
+    ["atur penandatanganan AJB Kebagusan 10/10 10.00", kantor, "propose_schedule"],
     ["ajukan verifikasi", akta, "propose_akta_step"],
     ["bisa apa?", kantor, "help"],
     ["bagaimana cuaca hari ini", kantor, "fallback"],
@@ -28,6 +32,7 @@ describe("matchIntent", () => {
 
   it("extracts arguments", () => {
     expect(matchIntent("cari Laras di klapper", kantor)).toEqual({ name: "search", query: "laras" });
+    expect(matchIntent("atur penandatanganan AJB Kebagusan besok 10.00", kantor)).toEqual({ name: "propose_schedule", text: "penandatanganan ajb kebagusan besok 10.00" });
     expect(matchIntent("repertorium PPAT 2026", kantor)).toEqual({ name: "repertorium", appointment: "ppat", year: 2026 });
   });
 });

@@ -1,6 +1,7 @@
 import "server-only";
 import { berkasType } from "@/lib/berkas-types";
-import { addDays, parseDate, parseTime } from "./dates";
+import { addDays, parseDate } from "./dates";
+import { parseScheduleText, subjectWords, type ScheduleArgs } from "./schedule-args";
 import { jakartaInstant, jakartaToday, formatTime, formatLongDate, jakartaDateOf } from "@/lib/jakarta-time";
 import {
   AKTA_STATUS_LABEL, APPOINTMENT_LABEL, DOCUMENT_TYPE_LABEL, LEGAL_CATEGORY_LABEL, PARTY_ROLE_LABEL, SCHEDULE_KIND_LABEL,
@@ -8,11 +9,11 @@ import {
 } from "@/lib/labels";
 import { formatDate } from "@/lib/utils";
 import type { ReadonlyDb } from "../readonly-db";
-import type { AgentContext, AgentRunInput } from "../types";
+import type { AgentAction, AgentContext, AgentRunInput } from "../types";
 import type { Intent } from "./intents";
 import type { RunBuilder } from "./run";
 
-type Ctx = { db: ReadonlyDb; run: RunBuilder; input: AgentRunInput; context: AgentContext };
+export type Ctx = { db: ReadonlyDb; run: RunBuilder; input: AgentRunInput; context: AgentContext };
 
 type AktaRow = { id: string; title: string; akta_type: string; status: AktaStatus; number: number | null; number_period: string | null; berkas_id: string; appointment: "notaris" | "ppat"; akta_date: string | null };
 type PartyRow = {
@@ -82,8 +83,8 @@ async function proposeItems(c: Ctx, berkasId: string, items: { op: string; label
 
 // ─── Skills ───
 
-export async function summary(c: Ctx) {
-  const id = requireBerkas(c);
+export async function summary(c: Ctx, text = "") {
+  const id = await targetBerkas(c, text, "summary");
   if (!id) return;
   c.run.step("Membaca data berkas, akta, dan dokumen");
   const { berkas, akta, docs } = await loadBerkas(c, id);
@@ -124,8 +125,8 @@ export async function parties(c: Ctx) {
 }
 
 /** PRD-A-02: per-party completeness and consistency, with both sources cited. */
-export async function kelengkapan(c: Ctx) {
-  const id = requireBerkas(c);
+export async function kelengkapan(c: Ctx, text = "") {
+  const id = await targetBerkas(c, text, "kelengkapan");
   if (!id) return;
   c.run.step("Membaca pihak pada akta di berkas ini");
   const { berkas, akta, docs, parties } = await loadBerkas(c, id);
@@ -144,12 +145,17 @@ export async function kelengkapan(c: Ctx) {
     return docs.find((d) => types.includes(d.doc_type) && tokens.some((t) => `${d.title} ${d.file_name}`.toLowerCase().includes(t)));
   };
 
-  const proposals: { op: string; label: string; params: Record<string, unknown> }[] = [];
+  const todos: { title: string; dueDate: string; reason: string }[] = [];
   const findings: string[] = [];
-  const due = addDays(jakartaToday().date, 4);
-  const addTodo = (title: string) => {
-    if (!openChecklist.some((o) => o.title.toLowerCase() === title.toLowerCase())) {
-      proposals.push({ op: "checklist.add", label: `Tambah ke checklist: ${title}, tenggat ${formatDate(due)}`, params: { title, due_date: due } });
+  // Due the day before the next signing, if one is booked; otherwise in four days.
+  const today = jakartaToday().date;
+  const signing = rows<{ starts_at: string }>(await c.db.select("schedules", "starts_at").eq("berkas_id", id).eq("kind", "penandatanganan")
+    .gte("starts_at", new Date().toISOString()).order("starts_at").limit(1))[0];
+  const beforeSigning = signing ? addDays(jakartaDateOf(signing.starts_at), -1) : null;
+  const due = beforeSigning && beforeSigning > today ? beforeSigning : addDays(today, 4);
+  const addTodo = (title: string, reason: string) => {
+    if (!openChecklist.some((o) => o.title.toLowerCase() === title.toLowerCase()) && !todos.some((t) => t.title === title)) {
+      todos.push({ title, dueDate: due, reason });
     }
   };
 
@@ -162,10 +168,10 @@ export async function kelengkapan(c: Ctx) {
     const ktp = findDoc(p, ["ktp"]);
     const npwp = findDoc(p, ["npwp"]);
     const notes: string[] = [];
-    if (!person.nik) { notes.push("NIK belum diisi"); findings.push(`NIK ${name} belum tercatat ${citeParty(c, p, "nik")}.`); addTodo(`Lengkapi NIK ${name}`); }
+    if (!person.nik) { notes.push("NIK belum diisi"); findings.push(`NIK ${name} belum tercatat ${citeParty(c, p, "nik")}.`); addTodo(`Lengkapi NIK ${name}`, "NIK belum tercatat"); }
     if (!person.address) { notes.push("alamat belum diisi"); findings.push(`Alamat ${name} belum tercatat ${citeParty(c, p, "address")}.`); }
-    if (!ktp) { notes.push("KTP belum diunggah"); findings.push(`Pindaian KTP ${name} belum ada di berkas ${citeParty(c, p)}. Ini perlu sebelum penandatanganan.`); addTodo(`Minta KTP ${name}`); }
-    if (!npwp) { notes.push("NPWP belum ada"); findings.push(`NPWP ${name} belum ada di berkas ${citeParty(c, p)}. Tidak menghalangi penandatanganan, tetapi dibutuhkan untuk pendaftaran NIB di OSS.`); addTodo(`Minta NPWP ${name}`); }
+    if (!ktp) { notes.push("KTP belum diunggah"); findings.push(`Pindaian KTP ${name} belum ada di berkas ${citeParty(c, p)}. Ini perlu sebelum penandatanganan.`); addTodo(`Minta KTP ${name}`, "KTP belum diunggah"); }
+    if (!npwp) { notes.push("NPWP belum ada"); findings.push(`NPWP ${name} belum ada di berkas ${citeParty(c, p)}. Tidak menghalangi penandatanganan, tetapi dibutuhkan untuk pendaftaran NIB di OSS.`); addTodo(`Minta NPWP ${name}`, "NPWP belum ada"); }
     const tone: "ok" | "warn" | "bad" = !person.nik || !ktp ? "bad" : notes.length ? "warn" : "ok";
     return {
       cells: [
@@ -186,15 +192,18 @@ export async function kelengkapan(c: Ctx) {
   c.run.say("Catatan: pencocokan dokumen memakai judul dan nama file. Pembacaan isi dokumen (OCR) belum tersedia, jadi isi KTP belum dibandingkan dengan data pihak.");
   if (berkas?.type === "ajb" && !docs.some((d) => d.doc_type === "sertifikat")) {
     c.run.say("Sertifikat tanah belum diunggah di berkas AJB ini.");
-    addTodo("Minta salinan sertifikat tanah");
+    addTodo("Minta salinan sertifikat tanah", "Sertifikat belum diunggah");
   }
-  if (proposals.length) await proposeItems(c, id, proposals, "kelengkapan");
+  if (todos.length && berkas) {
+    c.run.say(`Pilih kekurangan yang ingin dijadikan usulan checklist${signing ? " (tenggat sehari sebelum penandatanganan)" : ""}:`);
+    c.run.widget({ kind: "checklist_batch", berkas: { id, title: berkas.title }, items: todos });
+  }
   c.run.suggest(["apa yang kurang sebelum difinalkan?", "ringkasan berkas"]);
 }
 
 /** Akta readiness; proposes the next workflow step. Never finalizes (rule 2). */
-export async function readiness(c: Ctx) {
-  const id = requireBerkas(c);
+export async function readiness(c: Ctx, text = "") {
+  const id = await targetBerkas(c, text, "readiness");
   if (!id) return;
   c.run.step("Membaca akta, pihak, dan dokumen");
   const { akta, docs, parties } = await loadBerkas(c, id);
@@ -241,29 +250,164 @@ export async function proposeChecklist(c: Ctx, text: string) {
   if (!id) return;
   const due = parseDate(text);
   const title = text.replace(/[,;]?\s*(tenggat|batas|deadline|paling lambat|sebelum)\b.*$/i, "").replace(/[.,;\s]+$/, "").trim();
-  if (title.length < 3) return void c.run.say("Sebutkan item checklist-nya, misalnya \"tambahkan checklist minta NPWP Laras, tenggat Senin\".");
-  const nice = title.charAt(0).toUpperCase() + title.slice(1);
+  if (title.length < 3) {
+    const berkas = await readBerkas(c, id);
+    if (!berkas) return void c.run.say("Berkas ini tidak dapat saya baca.");
+    c.run.say("Isi item checklist yang ingin ditambahkan:");
+    return void c.run.widget({ kind: "checklist_form", berkas, defaults: due ? { dueDate: due } : {} });
+  }
+  return checklistSkill(c, id, [{ title: title.charAt(0).toUpperCase() + title.slice(1), ...(due ? { dueDate: due } : {}) }]);
+}
+
+/** A checklist request in structured form (a model's tool call); asks with a form when the item is missing. */
+export async function checklistRequest(c: Ctx, args: { berkas?: string; title?: string; dueDate?: string }) {
+  let berkas: BerkasRef | null = null;
+  if (c.context.kind !== "kantor") berkas = await readBerkas(c, c.context.berkasId);
+  else if (args.berkas) {
+    const { list } = await findBerkas(c, args.berkas);
+    if (list.length > 1) return void c.run.say(`Ada ${list.length} berkas yang cocok dengan "${args.berkas}": ${list.slice(0, 5).map((b) => b.title).join("; ")}. Sebutkan lebih lengkap.`);
+    berkas = list[0] ?? null;
+  }
+  if (!berkas) return void requireBerkas(c);
+  const title = args.title?.trim();
+  if (!title || title.length < 3) {
+    c.run.say("Isi item checklist yang ingin ditambahkan:");
+    return void c.run.widget({ kind: "checklist_form", berkas, defaults: args.dueDate ? { dueDate: args.dueDate } : {} });
+  }
+  return checklistSkill(c, berkas.id, [{ title: title.charAt(0).toUpperCase() + title.slice(1), ...(args.dueDate ? { dueDate: args.dueDate } : {}) }]);
+}
+
+/** Proposes checklist items (staff tier); nothing is added until someone approves. */
+export async function checklistSkill(c: Ctx, berkasId: string, items: { title: string; dueDate?: string }[]) {
   c.run.step("Menyiapkan usulan checklist");
-  c.run.say(`Saya siapkan usulan item checklist "${nice}"${due ? ` dengan tenggat ${formatDate(due)}` : ""}. Item baru ditambahkan setelah disetujui.`);
-  await proposeItems(c, id, [{ op: "checklist.add", label: `Tambah ke checklist: ${nice}${due ? `, tenggat ${formatDate(due)}` : ""}`, params: { title: nice, ...(due ? { due_date: due } : {}) } }], "checklist");
+  c.run.say(items.length === 1
+    ? `Saya siapkan usulan item checklist "${items[0]!.title}"${items[0]!.dueDate ? ` dengan tenggat ${formatDate(items[0]!.dueDate)}` : ""}. Item baru ditambahkan setelah disetujui.`
+    : `Saya siapkan usulan ${items.length} item checklist. Item baru ditambahkan setelah disetujui.`);
+  await proposeItems(c, berkasId, items.map((i) => ({
+    op: "checklist.add", label: `Tambah ke checklist: ${i.title}${i.dueDate ? `, tenggat ${formatDate(i.dueDate)}` : ""}`,
+    params: { title: i.title, ...(i.dueDate ? { due_date: i.dueDate } : {}) },
+  })), "checklist");
+}
+
+type BerkasRef = { id: string; title: string };
+
+async function readBerkas(c: Ctx, id: string) {
+  const { data } = await c.db.select("berkas", "id, title").eq("id", id).maybeSingle();
+  return (data as BerkasRef | null) ?? null;
+}
+
+/** Active berkas whose title holds every meaningful word of the request (RLS decides what is visible). */
+async function findBerkas(c: Ctx, query: string) {
+  const words = subjectWords(query.toLowerCase());
+  if (!words.length) return { words, list: [] as BerkasRef[] };
+  let q = c.db.select("berkas", "id, title").eq("status", "aktif");
+  for (const w of words) q = q.ilike("title", `%${w}%`);
+  return { words, list: rows<BerkasRef>(await q.order("updated_at", { ascending: false }).limit(20)) };
+}
+
+async function activeBerkas(c: Ctx) {
+  return rows<BerkasRef>(await c.db.select("berkas", "id, title").eq("status", "aktif").order("updated_at", { ascending: false }).limit(20));
+}
+
+/**
+ * The berkas a question is about. Inside a berkas that is the berkas; from the office view it is
+ * found by the words of the request. Several matches: the user picks (widget), and the request
+ * continues as `then`.
+ */
+async function targetBerkas(c: Ctx, text: string, then: "summary" | "kelengkapan" | "readiness"): Promise<string | null> {
+  if (c.context.kind !== "kantor") return c.context.berkasId;
+  const subject = text.toLowerCase().match(/\bberkas\s+(.+)$/)?.[1] ?? "";
+  c.run.step("Mencari berkasnya");
+  const { list } = await findBerkas(c, subject);
+  if (list.length === 1) return list[0]!.id;
+  if (list.length > 1) {
+    c.run.say(`Ada ${list.length} berkas aktif yang cocok. Pilih salah satu:`);
+    c.run.widget({ kind: "berkas_picker", options: list, then, text });
+    return null;
+  }
+  return requireBerkas(c);
+}
+
+/** Runs a berkas skill as if it were asked from inside that berkas. */
+function inBerkas(c: Ctx, berkas: BerkasRef): Ctx {
+  return { ...c, context: { kind: "berkas", label: berkas.title, berkasId: berkas.id } };
 }
 
 export async function proposeSchedule(c: Ctx, text: string) {
-  const id = requireBerkas(c);
-  if (!id) return;
-  const date = parseDate(text);
-  const time = parseTime(text);
-  if (!date || !time) return void c.run.say("Sebutkan tanggal dan jamnya, misalnya \"jadwalkan penandatanganan besok 14.00 di Ruang Utama\".");
-  const kind: ScheduleKind = /(tanda ?tangan|penandatangan|ttd)/.test(text) ? "penandatanganan" : /(internal|rapat)/.test(text) ? "internal" : "pertemuan_klien";
-  const location = text.match(/\bdi\s+(ruang[^,.;]*|kantor[^,.;]*)/i)?.[1]?.trim();
-  const title = (text.replace(/\b(hari ini|besok|lusa|senin|selasa|rabu|kamis|jumat|sabtu|minggu)\b.*$/i, "").trim() || SCHEDULE_KIND_LABEL[kind]);
-  const nice = title.charAt(0).toUpperCase() + title.slice(1);
+  return scheduleSkill(c, parseScheduleText(text));
+}
+
+/**
+ * A schedule proposal. What is missing (berkas, date or time) is asked for with a form instead of
+ * guessed; the form answer comes back through `runAction`.
+ */
+export async function scheduleSkill(c: Ctx, args: ScheduleArgs) {
+  let berkas: BerkasRef | null = null;
+  let options: BerkasRef[] = [];
+  if (args.berkasId) berkas = await readBerkas(c, args.berkasId);
+  else if (c.context.kind !== "kantor") berkas = await readBerkas(c, c.context.berkasId);
+  else {
+    c.run.step("Mencari berkasnya");
+    const found = args.berkasQuery ? (await findBerkas(c, args.berkasQuery)).list : [];
+    if (found.length === 1) berkas = found[0]!;
+    else options = found.length ? found : await activeBerkas(c);
+  }
+  if (!berkas && !options.length) return void c.run.say("Tidak ada berkas aktif yang dapat Anda lihat untuk dijadwalkan.");
+
+  const own = subjectWords((args.title ?? "").toLowerCase()).length > 0 && c.context.kind !== "kantor";
+  const title = berkas ? (own ? args.title! : `${SCHEDULE_KIND_LABEL[args.kind]} ${berkas.title}`) : undefined;
+  // A date in the past is never proposed; the form asks again.
+  if (args.date && args.date < jakartaToday().date) args = { ...args, date: undefined };
+  if (!berkas || !args.date || !args.time) {
+    const missing = [!berkas && "berkasnya", !args.date && "tanggal", !args.time && "jam"].filter(Boolean).join(", ").replace(/, ([^,]*)$/, " dan $1");
+    c.run.say(`Lengkapi ${missing} untuk jadwal ${SCHEDULE_KIND_LABEL[args.kind].toLowerCase()} ini:`);
+    c.run.widget({
+      kind: "schedule_form",
+      ...(berkas ? { berkas } : { berkasOptions: options }),
+      defaults: {
+        kind: args.kind,
+        ...(args.date ? { date: args.date } : {}), ...(args.time ? { time: args.time } : {}),
+        ...(args.location ? { location: args.location } : {}), ...(title ? { title } : {}),
+      },
+    });
+    return;
+  }
+
+  const time = args.time.replace(":", ".");
+  const when = `${formatLongDate(args.date)} pukul ${time} WIB${args.location ? ` di ${args.location}` : ""}`;
+  const cite = c.run.cite({ kind: "berkas", id: berkas.id, label: berkas.title, href: `/berkas/${berkas.id}` });
   c.run.step("Menyiapkan usulan jadwal");
-  c.run.say(`Saya siapkan usulan jadwal ${SCHEDULE_KIND_LABEL[kind].toLowerCase()} pada ${formatLongDate(date)} pukul ${time.replace(":", ".")} WIB${location ? ` di ${location}` : ""}.`);
-  await proposeItems(c, id, [{
-    op: "schedule.add", label: `Jadwalkan: ${nice}, ${formatLongDate(date)} ${time.replace(":", ".")} WIB${location ? `, ${location}` : ""}`,
-    params: { title: nice, kind, starts_at: jakartaInstant(date, time), ...(location ? { location } : {}) },
+  c.run.say(`Saya siapkan usulan jadwal ${SCHEDULE_KIND_LABEL[args.kind].toLowerCase()} untuk berkas ${berkas.title} ${cite} pada ${when}.`);
+  const ids = await proposeItems(c, berkas.id, [{
+    op: "schedule.add", label: `Jadwalkan: ${title}, ${formatLongDate(args.date)} ${time} WIB${args.location ? `, ${args.location}` : ""}`,
+    params: { title, kind: args.kind, starts_at: jakartaInstant(args.date, args.time), ...(args.location ? { location: args.location } : {}) },
   }], "schedule");
+  if (ids.length && args.kind === "penandatanganan") {
+    c.run.say("Setelah disetujui, saya langsung memeriksa kesiapan berkas di latar belakang, lalu memeriksa lagi H-3 dan H-1. "
+      + "Hasilnya saya tulis di Percakapan berkas dan saya kabarkan ke tim beserta usulan checklist bila ada yang kurang. "
+      + "Verifikasi dan persetujuan akta tetap dilakukan Notaris di halaman akta.");
+  }
+}
+
+/** The answer to a widget. Deterministic: the values are the user's own, never a model's. */
+export async function runAction(c: Ctx, action: AgentAction) {
+  const berkas = await readBerkas(c, action.berkasId);
+  if (!berkas) return void c.run.say("Berkas itu tidak dapat saya baca.");
+  switch (action.kind) {
+    case "schedule_form":
+      return scheduleSkill(c, { berkasId: berkas.id, date: action.date, time: action.time, kind: action.scheduleKind, title: action.title.trim(), ...(action.location?.trim() ? { location: action.location.trim() } : {}) });
+    case "checklist_form":
+      return checklistSkill(c, berkas.id, [{ title: action.title.trim(), ...(action.dueDate ? { dueDate: action.dueDate } : {}) }]);
+    case "checklist_batch":
+      return checklistSkill(c, berkas.id, action.items.map((i) => ({ title: i.title.trim(), ...(i.dueDate ? { dueDate: i.dueDate } : {}) })));
+    case "berkas_picker": {
+      const cb = inBerkas(c, berkas);
+      if (action.then === "schedule") return scheduleSkill(cb, { ...parseScheduleText(action.text), berkasId: berkas.id });
+      if (action.then === "summary") return summary(cb);
+      if (action.then === "kelengkapan") return kelengkapan(cb);
+      return readiness(cb);
+    }
+  }
 }
 
 export async function aktaByStatus(c: Ctx, status: AktaStatus) {
@@ -436,10 +580,10 @@ export async function runIntent(c: Ctx, intent: Intent) {
     case "propose_checklist": return proposeChecklist(c, intent.text);
     case "propose_schedule": return proposeSchedule(c, intent.text);
     case "propose_akta_step": return proposeAktaStep(c);
-    case "kelengkapan": return kelengkapan(c);
-    case "readiness": return readiness(c);
+    case "kelengkapan": return kelengkapan(c, intent.text);
+    case "readiness": return readiness(c, intent.text);
     case "parties": return parties(c);
-    case "summary": return summary(c);
+    case "summary": return summary(c, intent.text);
     case "akta_by_status": return aktaByStatus(c, intent.status);
     case "akta_final_period": return aktaFinalPeriod(c, intent.period);
     case "schedules": return schedules(c, intent.range);

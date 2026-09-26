@@ -137,6 +137,111 @@ class ErrorEvent(BaseModel):
     message: str
 
 
+class BerkasRef(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    id: UUID
+    title: str
+    sub: str | None = None
+
+
+class Kind1(StrEnum):
+    pertemuan_klien = 'pertemuan_klien'
+    penandatanganan = 'penandatanganan'
+    internal = 'internal'
+
+
+class Defaults(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    date: str | None = Field(None, pattern='^\\d{4}-\\d{2}-\\d{2}$')
+    time: str | None = Field(None, pattern='^\\d{2}:\\d{2}$')
+    kind: Kind1 | None = None
+    location: str | None = None
+    title: str | None = None
+
+
+class ScheduleFormWidget(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    kind: Literal['schedule_form']
+    berkas: BerkasRef | None = None
+    berkasOptions: list[BerkasRef] | None = Field(None, max_length=20)
+    defaults: Defaults
+
+
+class Defaults1(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    title: str | None = None
+    dueDate: str | None = Field(None, pattern='^\\d{4}-\\d{2}-\\d{2}$')
+
+
+class ChecklistFormWidget(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    kind: Literal['checklist_form']
+    berkas: BerkasRef
+    defaults: Defaults1
+
+
+class Then(StrEnum):
+    schedule = 'schedule'
+    summary = 'summary'
+    kelengkapan = 'kelengkapan'
+    readiness = 'readiness'
+
+
+class BerkasPickerWidget(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    kind: Literal['berkas_picker']
+    options: list[BerkasRef] = Field(..., max_length=20, min_length=1)
+    then: Then
+    text: str = Field(
+        ..., description='The original request, continued after the choice.'
+    )
+
+
+class Item(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    title: str
+    dueDate: str | None = Field(None, pattern='^\\d{4}-\\d{2}-\\d{2}$')
+    reason: str | None = None
+
+
+class ChecklistBatchWidget(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    kind: Literal['checklist_batch']
+    berkas: BerkasRef
+    items: list[Item] = Field(..., max_length=20, min_length=1)
+
+
+class WidgetEvent(BaseModel):
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    type: Literal['widget']
+    seq: int = Field(..., ge=0)
+    widgetId: str
+    widget: (
+        ScheduleFormWidget
+        | ChecklistFormWidget
+        | BerkasPickerWidget
+        | ChecklistBatchWidget
+    )
+
+
 class CitationEvent(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
@@ -156,6 +261,7 @@ class AgentEvent(
         | ProposalEvent
         | NavigateEvent
         | SuggestionsEvent
+        | WidgetEvent
         | DoneEvent
         | ErrorEvent
     ]
@@ -168,6 +274,7 @@ class AgentEvent(
         | ProposalEvent
         | NavigateEvent
         | SuggestionsEvent
+        | WidgetEvent
         | DoneEvent
         | ErrorEvent
     ) = Field(

@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { ArrowUpRight, CircleAlert } from "lucide-react";
-import type { AgentEvent, CitationTarget } from "@/lib/agent/types";
+import type { AgentEvent, CitationTarget, Widget } from "@/lib/agent/types";
 import { cn } from "@/lib/utils";
 import { useAgent, type UiMessage } from "./agent-provider";
 import { RichText } from "./cite-chip";
 import { ProposalCards } from "./proposal-card";
 import { ResultTable } from "./result-table";
 import { ToolSteps } from "./tool-steps";
+import { AgentWidget } from "./widgets";
 
 type View = {
   steps: { id: string; label: string; status: string }[];
@@ -18,10 +19,11 @@ type View = {
   links: { href: string; label: string }[];
   suggestions: string[];
   errors: string[];
+  widgets: { id: string; widget: Widget }[];
 };
 
 export function buildView(events: AgentEvent[]): View {
-  const v: View = { steps: [], cites: new Map(), blocks: [], proposals: [], links: [], suggestions: [], errors: [] };
+  const v: View = { steps: [], cites: new Map(), blocks: [], proposals: [], links: [], suggestions: [], errors: [], widgets: [] };
   for (const e of [...events].sort((a, b) => a.seq - b.seq)) {
     switch (e.type) {
       case "step": {
@@ -41,15 +43,17 @@ export function buildView(events: AgentEvent[]): View {
       case "navigate": v.links.push({ href: e.href, label: e.label }); break;
       case "suggestions": v.suggestions = e.items; break;
       case "error": v.errors.push(e.message); break;
+      case "widget": v.widgets.push({ id: e.widgetId, widget: e.widget }); break;
     }
   }
   return v;
 }
 
-export function AgentMessage({ message, compact }: { message: UiMessage; compact?: boolean }) {
+/** `latest`: the last message of the thread, whose widgets still take an answer. */
+export function AgentMessage({ message, compact, latest }: { message: UiMessage; compact?: boolean; latest?: boolean }) {
   const { send, busy } = useAgent();
   const v = buildView(message.events);
-  const hasContent = v.blocks.length > 0 || v.errors.length > 0 || v.links.length > 0;
+  const hasContent = v.blocks.length > 0 || v.errors.length > 0 || v.links.length > 0 || v.widgets.length > 0;
   return (
     <div className="mb-7" aria-live={message.streaming ? "polite" : undefined}>
       <ToolSteps steps={v.steps} running={message.streaming} />
@@ -76,6 +80,7 @@ export function AgentMessage({ message, compact }: { message: UiMessage; compact
         </div>
       )}
       {v.errors.map((e) => <p key={e} role="alert" className="text-[13px] text-destructive">{e}</p>)}
+      {v.widgets.map((w) => <AgentWidget key={w.id} id={w.id} widget={w.widget} active={!!latest && !message.streaming} />)}
       {v.proposals.length > 0 && <ProposalCards ids={v.proposals} />}
       {!message.streaming && v.suggestions.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1.5">

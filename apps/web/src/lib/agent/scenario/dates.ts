@@ -33,7 +33,9 @@ export function parseDate(text: string, now = new Date()): string | null {
     return `${year}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
   };
   if (named && MONTHS[named[2]!]) return pick(Number(named[1]), MONTHS[named[2]!]!, named[3] ? Number(named[3]) : undefined);
-  if (dm) return pick(Number(dm[1]), Number(dm[2]), dm[3] ? Number(dm[3]) : undefined);
+  // "14.00" also looks like d.m; it is not a date, so fall through to weekday names.
+  const byNumbers = dm && pick(Number(dm[1]), Number(dm[2]), dm[3] ? Number(dm[3]) : undefined);
+  if (byNumbers) return byNumbers;
   const dayIdx = DAYS.findIndex((d) => new RegExp(`\\b${d}\\b`).test(t));
   if (dayIdx >= 0) {
     const cur = new Date(`${today}T00:00:00Z`).getUTCDay();
@@ -53,6 +55,26 @@ export function parseTime(text: string): string | null {
   const min = Number(explicit[2] ?? 0);
   if (h > 23 || min > 59) return null;
   return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+}
+
+const MONTH_NAMES = Object.keys(MONTHS).sort((a, b) => b.length - a.length).join("|");
+const WHEN = [
+  /\b(?:pada\s+)?(?:hari ini|besok|lusa)\b/g,
+  new RegExp(`\\b(?:pada\\s+)?(?:hari\\s+)?(?:${DAYS.join("|")})(?:\\s+depan)?\\b`, "g"),
+  new RegExp(`\\b(?:pada\\s+)?(?:tanggal|tgl\\.?)?\\s*\\d{1,2}\\s+(?:${MONTH_NAMES})\\b(?:\\s+\\d{4})?`, "g"),
+  /\b(?:pada\s+)?(?:tanggal|tgl\.?)?\s*\d{4}-\d{2}-\d{2}\b/g,
+  /\b(?:pada\s+)?(?:tanggal|tgl\.?)\s*\d{1,2}[/.-]\d{1,2}(?:[/.-]\d{4})?\b/g,
+  /\b\d{1,2}\/\d{1,2}(?:\/\d{4})?\b/g,
+  /\b(?:jam|pukul)\s*\d{1,2}(?:[.:]\d{2})?(?:\s*wib)?\b/g,
+  /\b\d{1,2}[.:]\d{2}(?:\s*wib)?\b/g,
+  /\bdi\s+(?:ruang|kantor)[^,.;]*/g,
+];
+
+/** The text without its date, time and room phrases: "penandatanganan AJB tanggal 3 Oktober 10.00" → "penandatanganan AJB". */
+export function stripWhen(text: string) {
+  let t = text.toLowerCase();
+  for (const re of WHEN) t = t.replace(re, " ");
+  return t.replace(/\s+([,;.])/g, "$1").replace(/[\s,;.]+$/, "").replace(/^[\s,;.]+/, "").replace(/\s{2,}/g, " ").trim();
 }
 
 export { addDays };
