@@ -259,24 +259,6 @@ export async function proposeChecklist(c: Ctx, text: string) {
   return checklistSkill(c, id, [{ title: title.charAt(0).toUpperCase() + title.slice(1), ...(due ? { dueDate: due } : {}) }]);
 }
 
-/** A checklist request in structured form (a model's tool call); asks with a form when the item is missing. */
-export async function checklistRequest(c: Ctx, args: { berkas?: string; title?: string; dueDate?: string }) {
-  let berkas: BerkasRef | null = null;
-  if (c.context.kind !== "kantor") berkas = await readBerkas(c, c.context.berkasId);
-  else if (args.berkas) {
-    const { list } = await findBerkas(c, args.berkas);
-    if (list.length > 1) return void c.run.say(`Ada ${list.length} berkas yang cocok dengan "${args.berkas}": ${list.slice(0, 5).map((b) => b.title).join("; ")}. Sebutkan lebih lengkap.`);
-    berkas = list[0] ?? null;
-  }
-  if (!berkas) return void requireBerkas(c);
-  const title = args.title?.trim();
-  if (!title || title.length < 3) {
-    c.run.say("Isi item checklist yang ingin ditambahkan:");
-    return void c.run.widget({ kind: "checklist_form", berkas, defaults: args.dueDate ? { dueDate: args.dueDate } : {} });
-  }
-  return checklistSkill(c, berkas.id, [{ title: title.charAt(0).toUpperCase() + title.slice(1), ...(args.dueDate ? { dueDate: args.dueDate } : {}) }]);
-}
-
 /** Proposes checklist items (staff tier); nothing is added until someone approves. */
 export async function checklistSkill(c: Ctx, berkasId: string, items: { title: string; dueDate?: string }[]) {
   c.run.step("Menyiapkan usulan checklist");
