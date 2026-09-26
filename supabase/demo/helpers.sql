@@ -44,7 +44,8 @@ language plpgsql as $$
 declare v_id uuid;
 begin
   perform verity_seed.act((select staf from verity_seed.ctx));
-  select id into v_id from public.persons where tenant_id = (select tenant from verity_seed.ctx) and nik = p_nik;
+  select id into v_id from public.persons where tenant_id = (select tenant from verity_seed.ctx)
+     and (nik = p_nik or (p_nik is null and nik is null and full_name = p_name));
   if v_id is null then
     insert into public.persons (tenant_id, full_name, nik, birth_place, birth_date, address, occupation)
     values ((select tenant from verity_seed.ctx), p_name, p_nik, p_place, p_birth, p_address, p_job)

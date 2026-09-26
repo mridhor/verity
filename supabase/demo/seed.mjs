@@ -2,12 +2,17 @@
 // Synthetic demo data for one notary office, written straight into Supabase (never into the
 // frontend). All people, companies, numbers and files are fictitious; NIK start with "99".
 //
-//   node supabase/demo/seed.mjs --local  --notaris sari@kantor.test --staf andi@kantor.test
-//   node supabase/demo/seed.mjs --linked --notaris <email> --staf <email>
+// The data lives in one SQL file, supabase/demo/seed_demo.sql, generated from this script and
+// runnable as-is in the Supabase SQL Editor (edit the e-mail constants at its top). Files cannot
+// travel in SQL, so this script also uploads a small generated file for every seeded document to
+// the exact storage path recorded in `documents`:
 //
-// Runs from an operator machine with the Supabase CLI (no secret keys in the app). Refuses to
-// run twice for the same office. Afterwards it uploads a small generated file for every seeded
-// document to the exact storage path recorded in `documents`.
+//   node supabase/demo/seed.mjs --sql-out supabase/demo/seed_demo.sql \
+//     --notaris notaris@verity.com --staf staff@verity.com --team associate@verity.com,partner@verity.com
+//   node supabase/demo/seed.mjs --linked --from supabase/demo/seed_demo.sql
+//
+// Runs from an operator machine with the Supabase CLI (no secret keys in the app). Idempotent per
+// case: a berkas whose title already exists in the office is skipped, so running it twice adds nothing.
 
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -22,8 +27,15 @@ const target = args.includes("--linked") ? "--linked" : args.includes("--local")
 const opt = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
 const notarisEmail = opt("--notaris");
 const stafEmail = opt("--staf");
-if (!target || !notarisEmail || !stafEmail) {
-  console.error("Usage: node supabase/demo/seed.mjs --local|--linked --notaris <email> --staf <email>");
+const teamEmails = (opt("--team") ?? "").split(",").map((e) => e.trim()).filter(Boolean);
+const fromFile = opt("--from");
+const needsEmails = !fromFile && !args.includes("--files-only");
+if ((!target && !opt("--sql-out")) || (needsEmails && (!notarisEmail || !stafEmail))) {
+  console.error(`Usage:
+  node supabase/demo/seed.mjs --sql-out <file> --notaris <email> --staf <email> [--team a@x,b@y]   write the SQL file
+  node supabase/demo/seed.mjs --local|--linked --from <file.sql>                                  run a SQL file, then upload files
+  node supabase/demo/seed.mjs --local|--linked --notaris <email> --staf <email> [--team …]        generate and run
+  node supabase/demo/seed.mjs --local|--linked --files-only                                         only upload missing files`);
   process.exit(2);
 }
 
@@ -84,6 +96,12 @@ const COMPANIES = [
   npwp: `99.${String(100 + i)}.${String(200 + i * 3).padStart(3, "0")}.${i % 10}-${String(400 + i)}.000`,
 }));
 const company = (name) => COMPANIES.find((c) => c.name === name);
+// Named people for specific cases (e.g. a foreign director with a passport and no NIK).
+const namedPerson = (name, { nik = null, place = "Jakarta", birth = "1980-05-12", address, job = "Wiraswasta" } = {}) => {
+  const p = { key: `n${persons.length}`, name, nik, place, birth, address: address ?? `${pick(STREETS).replace("%", String(1 + Math.floor(rand() * 90)))}, ${pick(AREAS)}, Jakarta Selatan`, job };
+  persons.push(p);
+  return p;
+};
 let personCursor = 0;
 const nextPerson = () => persons[personCursor++ % persons.length];
 
@@ -102,10 +120,22 @@ const STEPS = {
   kuasa: ["Intake", "Draft akta", "Penandatanganan"],
   wasiat: ["Intake", "Draft akta", "Penandatanganan", "Pelaporan wasiat"],
   kredit: ["Intake", "Draft akta", "Penandatanganan"],
+  pendirian_yayasan: ["Intake", "Pesan nama", "Draft akta", "Penandatanganan", "SK Kemenkumham"],
+  pendirian_koperasi: ["Intake", "Rapat pendirian", "Draft akta", "Penandatanganan", "SK Kemenkop"],
+  jual_beli_saham: ["Intake", "Uji tuntas", "Draft akta", "Penandatanganan", "Pemberitahuan AHU"],
+  pembubaran: ["Intake", "RUPS pembubaran", "Pengumuman", "Draft akta", "Penandatanganan"],
+  aphb: ["Intake", "Pengecekan sertifikat", "Draft akta", "Penandatanganan", "Pendaftaran"],
+  tukar_menukar: ["Intake", "Cek lokasi", "Pengecekan sertifikat", "Draft akta", "Penandatanganan"],
+  perjanjian_kawin: ["Intake", "Draft akta", "Penandatanganan", "Pencatatan"],
+  sewa: ["Intake", "Negosiasi", "Draft akta", "Penandatanganan"],
+  legalisasi: ["Intake", "Pemeriksaan", "Legalisasi"],
 };
 
 const cases = [];
-function addCase(type, title, akta, { days, team = [] }) { cases.push({ type, title, akta, days, team }); }
+// opts: days (started n days ago), pic / members (SQL member refs), status (berkas status override),
+// step (workflow step), checklist [[title, dueOffset|null, done, who?]], schedules [[offset, "HH:MM",
+// kind, title, location]], proposals [[op, …]], extraDocs [{ type, title, file }].
+function addCase(type, title, akta, opts) { cases.push({ type, title, akta, ...opts }); }
 
 const pt = (name, status, finalDaysAgo) => {
   const f = [nextPerson(), nextPerson(), nextPerson()];
@@ -199,36 +229,155 @@ addCase("kuasa", "Kuasa Khusus RUPS Yayasan", [simple("Kuasa", "Akta Kuasa Khusu
 addCase("wasiat", "Wasiat Bapak Teguh Wibowo", [simple("Wasiat", "Akta Wasiat Teguh Wibowo", ["penghadap", "saksi", "saksi"], "verifikasi")], { days: 6 });
 addCase("pendirian_pt", "Pendirian PT Kopi Senja Lestari", [pt("Kopi Senja Lestari", "verifikasi")], { days: 5 });
 
+// ─── More active use cases: each exercises a different situation ───
+const ws = namedPerson("HANS MUELLER", { place: "München", birth: "1976-03-08", job: "Direktur", address: "Apartemen Setiabudi Sky Garden Tower 2, Jakarta Selatan" });
+const pma = [ws, nextPerson(), nextPerson()];
+addCase("pendirian_pt", "Pendirian PT PMA Nusantara Solar Energi", [{
+  appointment: "notaris", type: "Pendirian PT", title: "Akta Pendirian PT Nusantara Solar Energi (PMA)", status: "verifikasi",
+  notes: "Penanaman modal asing 67%; direktur warga negara Jerman (paspor, KITAS dalam proses).",
+  parties: [{ person: pma[0], role: "penghadap", capacity: "Calon Direktur (WNA)", npwp: false },
+    { person: pma[1], role: "penghadap", capacity: "Calon Komisaris" }, { person: pma[2], role: "kuasa", capacity: "Kuasa pemegang saham asing", docs: false }],
+}], { days: 12, step: "Draft akta",
+  checklist: [["Minta KITAS dan NPWP Hans Mueller", -1, false], ["Terjemahan tersumpah surat kuasa pemegang saham asing", 4, false],
+    ["Cek KBLI pembangkit tenaga surya di OSS (PMA)", -3, true], ["Konfirmasi modal disetor minimal PMA", 6, false]],
+  proposals: [[{ op: "checklist.add", label: "Tambah ke checklist: Minta paspor dan KTP kuasa pemegang saham", title: "Minta paspor dan KTP kuasa pemegang saham", due: 3 }]] });
+
+const pembina = [nextPerson(), nextPerson(), nextPerson()];
+addCase("pendirian_yayasan", "Pendirian Yayasan Cahaya Pelita Nusantara", [], { days: 9, step: "Pesan nama",
+  checklist: [[`Minta KTP pembina ${pembina[1].name}`, -3, false], [`Minta KTP pembina ${pembina[2].name}`, -3, false],
+    ["Pengecekan dan pemesanan nama yayasan di AHU", 2, false], ["Rancangan AD yayasan disetujui pembina", 7, false]],
+  schedules: [[3, "10:00", "pertemuan_klien", "Rapat pembina: pembahasan rancangan AD yayasan", "Ruang Meeting 1"]],
+  extraDocs: [{ type: "ktp", title: `KTP ${pembina[0].name}`, file: `KTP_${pembina[0].name.replace(/\s+/g, "_")}.png` },
+    { type: "lainnya", title: "Rancangan maksud dan tujuan yayasan", file: "Rancangan_Maksud_Tujuan.pdf" }] });
+
+addCase("pendirian_koperasi", "Pendirian Koperasi Nelayan Muara Sejahtera", [{
+  appointment: "notaris", type: "Pendirian Koperasi", title: "Akta Pendirian Koperasi Nelayan Muara Sejahtera", status: "draft",
+  notes: "Koperasi primer; 9 pendiri hadir; rapat pendirian sudah dilaksanakan.",
+  parties: Array.from({ length: 9 }, (_, k) => ({ person: nextPerson(), role: "penghadap", capacity: k === 0 ? "Calon Ketua" : k === 1 ? "Calon Bendahara" : "Pendiri", docs: k < 6 })),
+}], { days: 6, step: "Draft akta",
+  checklist: [["Berita acara rapat pendirian ditandatangani semua pendiri", -1, true], ["Minta KTP 3 pendiri yang belum", 2, false],
+    ["Bukti setoran simpanan pokok", 5, false]] });
+
+addCase("perubahan_ad", "RUPS Perubahan Direksi PT Samudra Logistik", [{
+  appointment: "notaris", type: "Perubahan Anggaran Dasar", title: "Akta Pernyataan Keputusan RUPS PT Samudra Logistik Indonesia (Perubahan Direksi)", status: "menunggu_ttd",
+  notes: "Pengangkatan direktur utama baru; pengunduran diri direktur lama per akhir bulan.",
+  parties: [{ company: company("Samudra Logistik Indonesia"), role: "penghadap", capacity: "Diwakili kuasa RUPS" }, { person: nextPerson(), role: "kuasa", capacity: "Penerima kuasa RUPS" }],
+}], { days: 10, schedules: [[1, "10:00", "penandatanganan", "Penandatanganan PKR RUPS PT Samudra Logistik", "Ruang Utama"]],
+  checklist: [["Notulen RUPS dan daftar hadir asli", -2, true], ["Pemberitahuan perubahan direksi ke AHU (setelah TTD)", 8, false]] });
+
+addCase("jual_beli_saham", "Jual Beli Saham PT Teknologi Cerdas Abadi", [{
+  appointment: "notaris", type: "Jual Beli Saham", title: "Akta Jual Beli Saham PT Teknologi Cerdas Abadi", status: "verifikasi",
+  notes: "Pengalihan 30% saham kepada investor; persetujuan RUPS dan pengumuman kepada kreditur sudah ada.",
+  parties: [{ person: nextPerson(), role: "pihak_pertama", capacity: "Penjual saham" }, { company: company("Rekayasa Hijau Mandiri"), role: "pihak_kedua", capacity: "Pembeli saham" }],
+}], { days: 15, pic: "v_team[1]", step: "Draft akta",
+  checklist: [["Bukti pengumuman rencana pengambilalihan di surat kabar", -5, true], ["Persetujuan RUPS atas pengalihan saham", -2, true],
+    ["Nilai transaksi dan bukti pembayaran", 3, false]],
+  proposals: [[{ op: "akta.approve_for_signing", label: "Setujui Akta Jual Beli Saham PT Teknologi Cerdas Abadi untuk penandatanganan" }]] });
+
+addCase("pembubaran", "Pembubaran CV Karya Bersama Mandiri", [{
+  appointment: "notaris", type: "Pembubaran", title: "Akta Pembubaran CV Karya Bersama Mandiri", status: "draft",
+  parties: [{ company: company("Karya Bersama Mandiri"), role: "penghadap", capacity: "Diwakili sekutu aktif" }, { person: nextPerson(), role: "penghadap", capacity: "Sekutu aktif" }],
+}], { days: 20, step: "Pengumuman",
+  checklist: [["Pengumuman pembubaran di surat kabar harian", -4, false], ["Laporan likuidator dan daftar kreditur", 10, false],
+    ["Pencabutan NIB di OSS setelah akta", null, false]] });
+
+addCase("ajb", "AJB Rumah Pondok Indah (menunggu roya)", [
+  { appointment: "notaris", type: "Pengikatan Jual Beli (PPJB)", title: "Akta PPJB Lunas Rumah Jl. Metro Pondok Indah Blok UA-3", status: "selesai", finalDaysAgo: 34,
+    parties: [{ person: nextPerson(), role: "pihak_pertama" }, { person: nextPerson(), role: "pihak_kedua" }] },
+  land("ajb", "Rumah Jl. Metro Pondok Indah Blok UA-3", "draft"),
+], { days: 42, step: "Pengecekan sertifikat",
+  checklist: [["Tunggu surat roya dari Bank Nusa Makmur", -6, false], ["Pengecekan sertifikat ke BPN setelah roya", 5, false],
+    ["Validasi PPh penjual dan BPHTB pembeli", 7, false]],
+  schedules: [[5, "13:00", "pertemuan_klien", "Pertemuan dengan bank: penyerahan surat roya", "Kantor Bank Nusa Makmur, Sudirman"]] });
+
+addCase("aphb", "APHB Rumah Bintaro setelah Perceraian", [{
+  appointment: "ppat", type: "Pembagian Hak Bersama (APHB)", title: "Akta Pembagian Hak Bersama Rumah Bintaro Sektor 3", status: "verifikasi",
+  notes: "Pembagian harta bersama berdasarkan putusan pengadilan agama yang telah berkekuatan hukum tetap.",
+  parties: [{ person: nextPerson(), role: "pihak_pertama" }, { person: nextPerson(), role: "pihak_kedua", docs: false },
+    { person: nextPerson(), role: "kuasa", capacity: "Kuasa pihak kedua" }],
+}], { days: 18, step: "Draft akta",
+  checklist: [["Salinan putusan PA berkekuatan hukum tetap", -8, true], ["Surat kuasa pihak kedua dilegalisasi", -1, false]] });
+
+addCase("tukar_menukar", "Tukar Menukar Tanah Desa Sukamaju", [], { days: 4, step: "Cek lokasi",
+  checklist: [["Surat keterangan kepala desa dan peta bidang", 3, false], ["Pengecekan kedua sertifikat ke BPN Bogor", 9, false]],
+  schedules: [[2, "08:30", "pertemuan_klien", "Cek lokasi tanah Desa Sukamaju bersama para pihak", "Desa Sukamaju, Bogor"]] });
+
+addCase("hibah", "Hibah Tanah Sawangan (BPHTB belum lunas)", [land("hibah", "Tanah Kavling Sawangan Permai Blok D", "menunggu_ttd")], { days: 17,
+  checklist: [["Validasi BPHTB penerima hibah di Bapenda Depok", -2, false], ["Surat persetujuan istri pemberi hibah", -5, true]],
+  schedules: [[4, "14:00", "penandatanganan", "Penandatanganan Akta Hibah Sawangan", "Ruang Utama"]] });
+
+const pasangan = [nextPerson(), nextPerson()];
+addCase("perjanjian_kawin", "Perjanjian Kawin Pisah Harta", [{
+  appointment: "notaris", type: "Perjanjian Kawin", title: `Akta Perjanjian Kawin ${pasangan[0].name} dan ${pasangan[1].name}`, status: "menunggu_ttd",
+  notes: "Perjanjian pisah harta sebelum perkawinan; dicatatkan ke KUA/Dukcapil setelah ditandatangani.",
+  parties: [{ person: pasangan[0], role: "pihak_pertama" }, { person: pasangan[1], role: "pihak_kedua" }, { person: nextPerson(), role: "saksi" }, { person: nextPerson(), role: "saksi" }],
+}], { days: 8, schedules: [[3, "11:00", "penandatanganan", "Penandatanganan Perjanjian Kawin", "Ruang Utama"]],
+  checklist: [["Daftar harta bawaan masing-masing pihak", -1, true], ["Jadwal pencatatan di Dukcapil", 10, false]] });
+
+const diaspora = namedPerson("RATNA SARI DEWI", { nik: "9971123008810077", place: "Surabaya", birth: "1981-08-30", job: "Karyawan swasta", address: "Kawasaki-shi, Kanagawa, Jepang" });
+addCase("waris", "Waris Keluarga Wibisono (ahli waris di Jepang)", [{
+  appointment: "notaris", type: "Keterangan Waris", title: "Akta Keterangan Waris Almarhum Suryo Wibisono", status: "draft",
+  parties: [{ person: nextPerson(), role: "penghadap", capacity: "Ahli waris" }, { person: diaspora, role: "kuasa", capacity: "Ahli waris, berdomisili di Jepang", docs: false },
+    { person: nextPerson(), role: "saksi" }],
+}], { days: 11, step: "Pengumpulan dokumen",
+  checklist: [["Surat kuasa ahli waris dilegalisasi KBRI Tokyo", 12, false], ["Akta kematian dan surat keterangan ahli waris kelurahan", -2, true],
+    ["Akta kelahiran semua ahli waris", 4, false]],
+  schedules: [[6, "16:00", "pertemuan_klien", "Konsultasi daring dengan ahli waris di Jepang", "Video call"]] });
+
+addCase("sewa", "Sewa Gudang Cikarang 5 Tahun", [{
+  appointment: "notaris", type: "Sewa-menyewa", title: "Akta Perjanjian Sewa Menyewa Gudang Cikarang Blok F-12", status: "verifikasi",
+  notes: "Jangka waktu 5 tahun, harga sewa dibayar per tahun di muka, opsi perpanjangan.",
+  parties: [{ company: company("Griya Asri Properti"), role: "pihak_pertama", capacity: "Pemilik gudang" }, { company: company("Samudra Logistik Indonesia"), role: "pihak_kedua", capacity: "Penyewa" }],
+}], { days: 13, pic: "v_team[2]", members: ["v_team[2]"], step: "Draft akta",
+  checklist: [["Sertifikat HGB gudang dan IMB/PBG", -3, true], ["Kesepakatan final klausul pemeliharaan", 2, false]],
+  proposals: [[{ op: "schedule.add", label: "Jadwalkan: Penandatanganan sewa gudang", kind: "penandatanganan", title: "Penandatanganan Akta Sewa Gudang Cikarang", offset: 5, time: "10:00" }]] });
+
+// Legalisation of a private deed is recorded in the legalisation book, not the akta repertorium:
+// no numbered akta here, only the documents and the checklist.
+addCase("legalisasi", "Legalisasi Perjanjian Kerja Sama Distribusi", [], { days: 3, step: "Legalisasi",
+  checklist: [["Periksa identitas dan kewenangan penanda tangan", -1, true], ["Catat di buku daftar surat di bawah tangan yang disahkan", 0, false],
+    ["Serahkan salinan legalisasi ke klien", 1, false]],
+  extraDocs: [{ type: "lainnya", title: "Perjanjian Kerja Sama Distribusi (asli, untuk legalisasi)", file: "PKS_Distribusi.pdf" },
+    { type: "lainnya", title: "Surat kuasa direksi PT Sinar Pangan Sejahtera", file: "Kuasa_Direksi.pdf" }] });
+
+addCase("pendirian_pt", "Pendirian PT Kopi Gunung Kerinci (dibatalkan)", [{
+  appointment: "notaris", type: "Pendirian PT", title: "Akta Pendirian PT Kopi Gunung Kerinci", status: "draft",
+  parties: [{ person: nextPerson(), role: "penghadap" }, { person: nextPerson(), role: "penghadap" }],
+}], { days: 30, status: "ditutup", step: "Pesan nama",
+  checklist: [["Klien membatalkan rencana pendirian; arsipkan dokumen", -10, true]] });
+
 // ─── SQL ───
 const out = [];
 const sql = (s) => out.push(s);
 sql(`do $seed$
 declare
-  v_tenant uuid; v_notaris uuid; v_staf uuid; v_retno uuid; v_dimas uuid; v_maya uuid;
-  v_off_notaris uuid; v_off_ppat uuid; v_name text;
+  -- ▼ Edit these to the accounts of the office to fill (they must already be members). ▼
+  c_notaris_email constant text := ${q(notarisEmail ?? "notaris@example.test")};   -- Notaris (becomes the official)
+  c_staf_email    constant text := ${q(stafEmail ?? "staf@example.test")};   -- main staff member
+  c_team_emails   constant text[] := array[${teamEmails.map(q).join(", ")}]::text[];   -- other members (optional)
+  -- ▲ ─────────────────────────────────────────────────────────────────────────────── ▲
+  v_tenant uuid; v_notaris uuid; v_staf uuid; v_team uuid[];
+  v_off_notaris uuid; v_off_ppat uuid; v_name text; v_items jsonb;
   b uuid; a uuid;
   p jsonb := '{}'::jsonb; c jsonb := '{}'::jsonb;
 begin
   select tm.tenant_id, tm.user_id into v_tenant, v_notaris
     from public.tenant_members tm join auth.users u on u.id = tm.user_id
-   where lower(u.email) = lower(${q(notarisEmail)}) and tm.role = 'notaris' and tm.active;
-  if v_tenant is null then raise exception 'Akun Notaris % belum terdaftar aktif di kantor mana pun', ${q(notarisEmail)}; end if;
+   where lower(u.email) = lower(c_notaris_email) and tm.role = 'notaris' and tm.active;
+  if v_tenant is null then raise exception 'Akun Notaris % belum terdaftar aktif di kantor mana pun', c_notaris_email; end if;
   select tm.user_id into v_staf
     from public.tenant_members tm join auth.users u on u.id = tm.user_id
-   where lower(u.email) = lower(${q(stafEmail)}) and tm.tenant_id = v_tenant and tm.active and tm.role <> 'super_admin';
-  if v_staf is null then raise exception 'Akun staf % belum terdaftar aktif di kantor yang sama', ${q(stafEmail)}; end if;
-  if exists (select 1 from public.berkas where tenant_id = v_tenant and title = 'Pendirian PT Teknologi Cerdas Abadi') then
-    raise exception 'Data demo sudah pernah diisi untuk kantor ini';
-  end if;
+   where lower(u.email) = lower(c_staf_email) and tm.tenant_id = v_tenant and tm.active and tm.role <> 'super_admin';
+  if v_staf is null then raise exception 'Akun staf % belum terdaftar aktif di kantor yang sama', c_staf_email; end if;
 
   delete from verity_seed.ctx;
   insert into verity_seed.ctx (tenant, notaris, staf) values (v_tenant, v_notaris, v_staf);
 
-  -- Officials (Notaris and PPAT) for the Notaris, unless the office already recorded them.
+  -- Officials (Notaris and PPAT) under the Notaris's display name, unless already recorded.
   select display_name into v_name from public.tenant_members where tenant_id = v_tenant and user_id = v_notaris;
   insert into public.officials (tenant_id, user_id, appointment, display_name, kedudukan, sk_ref)
-  values (v_tenant, v_notaris, 'notaris', v_name || ', S.H., M.Kn.', 'Kota Administrasi Jakarta Selatan', 'AHU-00123.AH.02.01.Tahun 2015'),
-         (v_tenant, v_notaris, 'ppat', v_name || ', S.H., M.Kn.', 'Kota Administrasi Jakarta Selatan', '112/KEP-17.3/IV/2016')
+  values (v_tenant, v_notaris, 'notaris', v_name, 'Kota Administrasi Jakarta Selatan', 'AHU-00123.AH.02.01.Tahun 2015'),
+         (v_tenant, v_notaris, 'ppat', v_name, 'Kota Administrasi Jakarta Selatan', '112/KEP-17.3/IV/2016')
   on conflict (tenant_id, user_id, appointment) do nothing;
   select id into v_off_notaris from public.officials where tenant_id = v_tenant and user_id = v_notaris and appointment = 'notaris';
   select id into v_off_ppat from public.officials where tenant_id = v_tenant and user_id = v_notaris and appointment = 'ppat';
@@ -237,9 +386,19 @@ begin
   insert into public.tenant_settings (tenant_id, annual_akta_target, session_timeout_hours)
   values (v_tenant, 60, 8) on conflict (tenant_id) do nothing;
 
-  v_retno := verity_seed.colleague('retno.wulandari@demo.verity.test', 'Retno Wulandari', 'staf_admin');
-  v_dimas := verity_seed.colleague('dimas.prasetyo@demo.verity.test', 'Dimas Prasetyo', 'staf_admin');
-  v_maya := verity_seed.colleague('maya.kartika@demo.verity.test', 'Maya Kartika', 'staf_admin');
+  -- The team: the listed members in the given order; without any, colleague accounts that cannot
+  -- sign in are added so work can still be spread over people. Always three slots.
+  select coalesce(array_agg(tm.user_id order by array_position(c_team_emails, lower(u.email))), '{}') into v_team
+    from public.tenant_members tm join auth.users u on u.id = tm.user_id
+   where lower(u.email) = any(c_team_emails) and tm.tenant_id = v_tenant and tm.active
+     and tm.role <> 'super_admin' and tm.user_id not in (v_staf, v_notaris);
+  if coalesce(array_length(v_team, 1), 0) = 0 then
+    v_team := array[
+      verity_seed.colleague('retno.wulandari@demo.verity.test', 'Retno Wulandari', 'staf_admin'),
+      verity_seed.colleague('dimas.prasetyo@demo.verity.test', 'Dimas Prasetyo', 'staf_admin'),
+      verity_seed.colleague('maya.kartika@demo.verity.test', 'Maya Kartika', 'staf_admin')];
+  end if;
+  while array_length(v_team, 1) < 3 loop v_team := v_team || v_team[1]; end loop;
 `);
 
 for (const p of persons) {
@@ -249,18 +408,23 @@ for (const c of COMPANIES) {
   sql(`  c := c || jsonb_build_object(${q(c.key)}, verity_seed.company(${q(c.form)}, ${q(c.name)}, ${q(c.nib)}, ${q(c.npwp)}, ${q(c.domicile)}));`);
 }
 
-const TEAM = ["v_staf", "v_retno", "v_dimas", "v_maya"];
+const TEAM = ["v_staf", "v_team[1]", "v_team[2]", "v_team[3]"];
 const finals = [];
 const docs = [];
 cases.forEach((cs, i) => {
-  const pic = i % 3 === 0 ? "v_staf" : TEAM[i % TEAM.length];
-  const members = [...new Set([pic, "v_staf", TEAM[(i + 1) % TEAM.length]])];
+  const pic = cs.pic ?? (i % 3 === 0 ? "v_staf" : TEAM[i % TEAM.length]);
+  const members = [...new Set([pic, "v_staf", TEAM[(i + 1) % TEAM.length], ...(cs.members ?? [])])];
   const steps = STEPS[cs.type];
-  const allFinal = cs.akta.every((x) => x.status === "selesai" || x.status === "diarsipkan");
+  const hasAkta = cs.akta.length > 0;
+  const allFinal = hasAkta && cs.akta.every((x) => x.status === "selesai" || x.status === "diarsipkan");
   const anySigning = cs.akta.some((x) => x.status === "menunggu_ttd");
-  const step = allFinal ? steps[steps.length - 1] : anySigning ? "Penandatanganan" : cs.akta.some((x) => x.status === "verifikasi") ? "Draft akta" : steps[1];
-  const status = allFinal && cs.days > 60 ? "selesai" : "aktif";
+  const step = cs.step ?? (allFinal ? steps[steps.length - 1] : anySigning ? "Penandatanganan"
+    : cs.akta.some((x) => x.status === "verifikasi") ? "Draft akta" : hasAkta ? steps[1] : steps[0]);
+  const status = cs.status ?? (allFinal && cs.days > 60 ? "selesai" : "aktif");
+  // Each case once per office: an existing berkas title means it was seeded already (or made by hand).
+  sql(`  if not exists (select 1 from public.berkas where tenant_id = v_tenant and title = ${q(cs.title)}) then`);
   sql(`  b := verity_seed.berkas(${q(cs.type)}, ${q(cs.title)}, ${pic}, array[${members.join(", ")}]::uuid[], ${q(steps.includes(step) ? step : steps[1])}, ${q(status)}, now() - interval '${cs.days} days');`);
+  sql(`  perform set_config('verity_seed.b_${i}', b::text, true);`);
   cs.akta.forEach((ak, j) => {
     const parties = ak.parties.map((pt) => pt.person
       ? `jsonb_build_object('person', p ->> ${q(pt.person.key)}, 'role', ${q(pt.role)}, 'capacity', ${q(pt.capacity ?? null)})`
@@ -270,50 +434,68 @@ cases.forEach((cs, i) => {
     const ref = `a_${i}_${j}`;
     sql(`  perform set_config('verity_seed.${ref}', a::text, true);`);
     if (ak.finalDaysAgo !== undefined) finals.push({ ref, daysAgo: ak.finalDaysAgo, archive: ak.status === "diarsipkan" });
-    // Documents: identity cards of the people, land certificate, minuta of final akta.
+    // Documents: identity cards of the people (unless the case lacks them on purpose), land
+    // certificate, draft power of attorney, minuta of final akta.
     const seenKtp = new Set();
     for (const pt of ak.parties) {
-      if (pt.person && pt.role !== "saksi" && !seenKtp.has(pt.person.key)) {
+      if (pt.person && pt.role !== "saksi" && pt.docs !== false && !seenKtp.has(pt.person.key)) {
         seenKtp.add(pt.person.key);
-        docs.push({ berkas: "b", akta: "a", type: "ktp", title: `KTP ${pt.person.name}`, file: `KTP_${pt.person.name.replace(/\s+/g, "_")}.png`, mime: "image/png", days: cs.days - 1, by: pic });
-        if (rand() < 0.35) docs.push({ berkas: "b", akta: "a", type: "npwp", title: `NPWP ${pt.person.name}`, file: `NPWP_${pt.person.name.replace(/\s+/g, "_")}.pdf`, mime: "application/pdf", days: cs.days - 2, by: pic });
+        docs.push({ akta: "a", type: pt.person.nik ? "ktp" : "lainnya", title: `${pt.person.nik ? "KTP" : "Paspor"} ${pt.person.name}`, file: `${pt.person.nik ? "KTP" : "Paspor"}_${pt.person.name.replace(/\s+/g, "_")}.png`, mime: "image/png", days: cs.days - 1, by: pic });
+        if (pt.npwp ?? rand() < 0.35) docs.push({ akta: "a", type: "npwp", title: `NPWP ${pt.person.name}`, file: `NPWP_${pt.person.name.replace(/\s+/g, "_")}.pdf`, mime: "application/pdf", days: cs.days - 2, by: pic });
       }
     }
-    if (["ajb", "hibah", "apht"].includes(cs.type)) docs.push({ berkas: "b", akta: "a", type: "sertifikat", title: `Sertifikat ${ak.title.replace(/^(Akta Jual Beli|Akta Hibah|APHT) /, "")}`, file: "Sertifikat_SHM.pdf", mime: "application/pdf", days: cs.days - 2, by: pic });
-    if (ak.type === "Kuasa") docs.push({ berkas: "b", akta: "a", type: "surat_kuasa", title: "Draft surat kuasa dari klien", file: "Draft_Surat_Kuasa.pdf", mime: "application/pdf", days: cs.days - 1, by: pic });
-    if (ak.finalDaysAgo !== undefined) docs.push({ berkas: "b", akta: "a", type: "minuta", title: `Minuta ${ak.title}`, file: "Minuta_Akta.pdf", mime: "application/pdf", days: ak.finalDaysAgo, by: pic, afterFinal: ref });
+    if (["ajb", "hibah", "apht", "aphb", "tukar_menukar"].includes(cs.type) && ak.appointment === "ppat") docs.push({ akta: "a", type: "sertifikat", title: `Sertifikat ${ak.title.replace(/^(Akta Jual Beli|Akta Hibah|APHT|Akta Pembagian Hak Bersama) /, "")}`, file: "Sertifikat_SHM.pdf", mime: "application/pdf", days: cs.days - 2, by: pic });
+    if (ak.type === "Kuasa") docs.push({ akta: "a", type: "surat_kuasa", title: "Draft surat kuasa dari klien", file: "Draft_Surat_Kuasa.pdf", mime: "application/pdf", days: cs.days - 1, by: pic });
+    if (ak.finalDaysAgo !== undefined) docs.push({ akta: "a", type: "minuta", title: `Minuta ${ak.title}`, file: "Minuta_Akta.pdf", mime: "application/pdf", days: ak.finalDaysAgo, by: pic, afterFinal: ref, caseIndex: i });
     for (const d of docs.filter((x) => !x.emitted && !x.afterFinal)) {
       d.emitted = true;
-      sql(`  perform verity_seed.document(${d.berkas}, ${d.akta}, ${q(d.type)}, ${q(d.title)}, ${q(d.file)}, ${q(d.mime)}, ${20000 + Math.floor(rand() * 900000)}, now() - interval '${Math.max(0, d.days)} days', ${d.by});`);
+      sql(`  perform verity_seed.document(b, ${d.akta}, ${q(d.type)}, ${q(d.title)}, ${q(d.file)}, ${q(d.mime)}, ${20000 + Math.floor(rand() * 900000)}, now() - interval '${Math.max(0, d.days)} days', ${d.by});`);
     }
   });
-  // Checklist for work in progress.
-  if (!allFinal) {
+  for (const d of cs.extraDocs ?? []) {
+    sql(`  perform verity_seed.document(b, null, ${q(d.type)}, ${q(d.title)}, ${q(d.file)}, ${q(d.file.endsWith(".png") ? "image/png" : "application/pdf")}, ${30000 + Math.floor(rand() * 600000)}, now() - interval '${Math.max(0, cs.days - 1)} days', ${pic});`);
+  }
+  // Checklist: the case's own items (its real blockers), or generic ones for work in progress.
+  if (cs.checklist) {
+    for (const [title, due, done, who] of cs.checklist) sql(`  perform verity_seed.checklist(b, ${q(title)}, ${who ?? pick(TEAM)}, ${due === null ? "null" : `current_date + ${due}`}, ${done});`);
+  } else if (!allFinal && hasAkta) {
     const lead = cs.akta[0].parties.find((x) => x.person)?.person.name ?? "klien";
     const items = [
       [`Minta NPWP ${lead}`, 3, false], ["Konfirmasi jadwal penandatanganan dengan klien", 1, false],
       [cs.type === "pendirian_pt" ? "Pengecekan dan pemesanan nama PT di AHU" : cs.type === "ajb" || cs.type === "apht" || cs.type === "hibah" ? "Pengecekan sertifikat ke BPN" : "Kumpulkan dokumen pendukung", -2, rand() < 0.5],
       ["Kirim draft akta ke klien untuk dibaca", -4, true],
     ].slice(0, 2 + Math.floor(rand() * 3));
-    for (const [title, due, done] of items) {
-      sql(`  perform verity_seed.checklist(b, ${q(title)}, ${pick(TEAM)}, current_date + ${due}, ${done});`);
-    }
-    if (cs.akta.some((x) => x.status === "menunggu_ttd")) {
-      const offset = 1 + Math.floor(rand() * 6);
-      sql(`  perform verity_seed.schedule(b, 'penandatanganan', ${q(`Penandatanganan ${cs.akta[0].title}`)}, ${at(offset, pick(["10:00", "13:30", "15:00"]))}, 'Ruang Utama', 'Para pihak membawa KTP asli.', ${pic});`);
-    }
+    for (const [title, due, done] of items) sql(`  perform verity_seed.checklist(b, ${q(title)}, ${pick(TEAM)}, current_date + ${due}, ${done});`);
   }
-  sql(`  perform set_config('verity_seed.b_${i}', b::text, true);`);
+  for (const [off, time, kind, title, loc] of cs.schedules ?? []) {
+    sql(`  perform verity_seed.schedule(b, ${q(kind)}, ${q(title)}, ${at(off, time)}, ${q(loc)}, null, ${pic});`);
+  }
+  if (!cs.schedules && !cs.status && cs.akta.some((x) => x.status === "menunggu_ttd")) {
+    const offset = 1 + Math.floor(rand() * 6);
+    sql(`  perform verity_seed.schedule(b, 'penandatanganan', ${q(`Penandatanganan ${cs.akta[0].title}`)}, ${at(offset, pick(["10:00", "13:30", "15:00"]))}, 'Ruang Utama', 'Para pihak membawa KTP asli.', ${pic});`);
+  }
+  // Agent proposals still waiting for a decision (staff proposes; the tiers decide).
+  (cs.proposals ?? []).forEach((ops, n) => {
+    const items = ops.map((o) => `jsonb_build_object('op', ${q(o.op)}, 'label', ${q(o.label)}, 'params', ${o.op === "akta.approve_for_signing"
+      ? `jsonb_build_object('akta_id', current_setting('verity_seed.a_${i}_${o.akta ?? 0}'))`
+      : o.op === "schedule.add"
+        ? `jsonb_build_object('kind', ${q(o.kind)}, 'title', ${q(o.title)}, 'starts_at', to_char((${at(o.offset, o.time)}) at time zone 'Asia/Jakarta', 'YYYY-MM-DD"T"HH24:MI:SS+07:00'))`
+        : `jsonb_build_object('title', ${q(o.title)}, 'due_date', (current_date + ${o.due})::text)`})`);
+    sql(`  perform verity_seed.act(v_staf);`);
+    sql(`  perform public.create_proposed_changes(b, jsonb_build_array(${items.join(", ")}), ${q(`demo-${i}-${n}`)});`);
+  });
+  sql(`  end if;`);
 });
 
-// Finalize in date order so numbers follow the akta dates.
+// Finalize in date order so numbers follow the akta dates (only akta seeded in this run).
 finals.sort((x, y) => y.daysAgo - x.daysAgo);
 for (const f of finals) {
+  sql(`  if coalesce(current_setting('verity_seed.${f.ref}', true), '') <> '' then`);
   sql(`  perform verity_seed.finalize(current_setting('verity_seed.${f.ref}')::uuid, current_date - ${f.daysAgo}, ${f.archive});`);
   for (const d of docs.filter((x) => x.afterFinal === f.ref)) {
-    const [, i] = f.ref.split("_");
-    sql(`  perform verity_seed.document(current_setting('verity_seed.b_${i}')::uuid, current_setting('verity_seed.${f.ref}')::uuid, ${q(d.type)}, ${q(d.title)}, ${q(d.file)}, ${q(d.mime)}, ${200000 + Math.floor(rand() * 2000000)}, now() - interval '${Math.max(0, d.days)} days', ${d.by});`);
+    sql(`  perform verity_seed.document(current_setting('verity_seed.b_${d.caseIndex}')::uuid, current_setting('verity_seed.${f.ref}')::uuid, ${q(d.type)}, ${q(d.title)}, ${q(d.file)}, ${q(d.mime)}, ${200000 + Math.floor(rand() * 2000000)}, now() - interval '${Math.max(0, d.days)} days', ${d.by});`);
   }
+  sql(`  end if;`);
 }
 
 // Office agenda.
@@ -331,7 +513,9 @@ const AGENDA = [
   [19, "13:30", "pertemuan_klien", "Konsultasi pendirian koperasi", "Ruang Meeting 2"], [21, "09:00", "internal", "Rapat mingguan kantor", "Ruang Meeting 1"],
 ];
 for (const [off, time, kind, title, loc] of AGENDA) {
-  sql(`  perform verity_seed.schedule(null, ${q(kind)}, ${q(title)}, ${at(off, time)}, ${q(loc)}, null, ${pick(["v_staf", "v_retno", "v_maya"])});`);
+  sql(`  if not exists (select 1 from public.schedules where tenant_id = v_tenant and berkas_id is null and title = ${q(title)} and starts_at = ${at(off, time)}) then
+    perform verity_seed.schedule(null, ${q(kind)}, ${q(title)}, ${at(off, time)}, ${q(loc)}, null, ${pick(["v_staf", "v_team[1]", "v_team[3]"])});
+  end if;`);
 }
 
 // Protokol received from other notaries (fictitious names).
@@ -344,8 +528,10 @@ const PROTOKOL = [
   ["Notaris Agustinus Halim, S.H.", "AHU-0078.AH.02.02.Tahun 2005", "Tangerang Selatan", -6, 1203, "2005–2025", "dalam_proses"],
 ];
 for (const [name, sk, wil, off, count, range, st] of PROTOKOL) {
-  sql(`  insert into public.protokol_transfers (source_notaris_name, sk_ref, wilayah, handover_date, akta_count, year_range, status, notes)
-  values (${q(name)}, ${q(sk)}, ${q(wil)}, current_date + ${off}, ${count}, ${q(range)}, ${q(st)}, ${q(st === "diterima" ? "Berita acara serah terima ditandatangani; protokol disimpan di Ruang Arsip." : "Menunggu penghitungan ulang dan berita acara dari MPD.")});`);
+  sql(`  if not exists (select 1 from public.protokol_transfers where tenant_id = v_tenant and source_notaris_name = ${q(name)}) then
+    insert into public.protokol_transfers (source_notaris_name, sk_ref, wilayah, handover_date, akta_count, year_range, status, notes)
+    values (${q(name)}, ${q(sk)}, ${q(wil)}, current_date + ${off}, ${count}, ${q(range)}, ${q(st)}, ${q(st === "diterima" ? "Berita acara serah terima ditandatangani; protokol disimpan di Ruang Arsip." : "Menunggu penghitungan ulang dan berita acara dari MPD.")});
+  end if;`);
 }
 
 // Additional well-known legal references (all left "belum terverifikasi" for the Notaris to check).
@@ -376,12 +562,31 @@ end $seed$;
 drop schema verity_seed cascade;`);
 
 // ─── Run ───
+const { readFileSync } = await import("node:fs");
+const HEADER = `-- ════════════════════════════════════════════════════════════════════════════════════════════
+-- Verity: synthetic demo data for one notary office. GENERATED by supabase/demo/seed.mjs; edit
+-- the cases there and regenerate rather than editing this file by hand (the e-mails are the
+-- exception: change the three constants at the top of the DO block below).
+--
+-- Everything here is fictitious (people, companies, NIK starting with "99", numbers, files).
+-- Rows are written through the app's own RPCs acting as the office members (simulated JWT
+-- claims), so akta numbering, repertorium, klapper, status history, notifications and the
+-- hash-chained audit log are produced exactly as in normal use.
+--
+-- Run it once per office, as the database owner:
+--   • Supabase dashboard → SQL Editor → paste this file → Run, or
+--   • supabase db query --linked -f supabase/demo/seed_demo.sql
+-- It is idempotent per case: a berkas whose title already exists is skipped.
+-- Files cannot travel in SQL. Afterwards upload the sample files for the documents with
+--   node supabase/demo/seed.mjs --linked --files-only
+-- ════════════════════════════════════════════════════════════════════════════════════════════
+`;
 const work = mkdtempSync(join(tmpdir(), "verity-seed-"));
-const file = join(work, "seed.sql");
-writeFileSync(file, `${(await import("node:fs")).readFileSync(join(here, "helpers.sql"), "utf8")}\n${out.join("\n")}\n`);
-if (opt("--sql-out")) { writeFileSync(opt("--sql-out"), (await import("node:fs")).readFileSync(file)); console.log(`SQL ditulis ke ${opt("--sql-out")}`); process.exit(0); }
+const file = fromFile ?? join(work, "seed.sql");
+if (!fromFile) writeFileSync(file, `${HEADER}\n${readFileSync(join(here, "helpers.sql"), "utf8")}\n${out.join("\n")}\n`);
+if (opt("--sql-out")) { writeFileSync(opt("--sql-out"), readFileSync(file)); console.log(`SQL ditulis ke ${opt("--sql-out")}`); process.exit(0); }
 const cli = (...a) => execFileSync("supabase", a, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024 });
-console.log(`Seeding ${cases.length} berkas, ${cases.reduce((n, c) => n + c.akta.length, 0)} akta (${finals.length} final), ${persons.length} orang, ${COMPANIES.length} badan usaha…`);
+if (!args.includes("--files-only")) console.log(fromFile ? `Menjalankan ${fromFile}…` : `Seeding ${cases.length} berkas, ${cases.reduce((n, c) => n + c.akta.length, 0)} akta (${finals.length} final), ${persons.length} orang, ${COMPANIES.length} badan usaha…`);
 // psql for the local stack (the CLI drops errors of large scripts); the Management API for --linked.
 const PSQL = ["/opt/homebrew/opt/postgresql@17/bin/psql", "/usr/bin/psql"].find((p) => { try { execFileSync(p, ["--version"]); return true; } catch { return false; } });
 try {
@@ -413,14 +618,26 @@ for (const r of rows) {
 console.log(`Uploading ${rows.length} files…`);
 // One `storage cp` per file to the exact recorded path (a recursive copy nests the folder name).
 const { execFile } = await import("node:child_process");
-const upload = (r) => new Promise((resolve) => execFile("supabase",
+const once = (r) => new Promise((resolve) => execFile("supabase",
   ["storage", "cp", target, "--experimental", "--content-type", r.mime_type === "image/png" ? "image/png" : "application/pdf",
    join(root, r.storage_path), `ss:///documents/${r.storage_path}`],
-  { encoding: "utf8" }, (err, _o, stderr) => resolve(err ? `${r.storage_path}: ${stderr || err.message}` : null)));
+  { encoding: "utf8" }, (err, stdout, stderr) => resolve(err || /"_tag":"Error"/.test(stdout) ? `${stderr || ""}${stdout || ""}${err?.message ?? ""}` : null)));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// The hosted Management API rate-limits key lookups (one per `storage cp`): go slower and retry.
+const upload = async (r) => {
+  for (let attempt = 1; ; attempt++) {
+    const err = await once(r);
+    if (!err) return null;
+    if (attempt >= 6 || !/Too Many Requests|Throttler|429/.test(err)) return `${r.storage_path}: ${err.slice(0, 300)}`;
+    await sleep(4000 * attempt);
+  }
+};
+const jobs = Number(opt("--jobs") ?? (target === "--linked" ? 2 : 8));
 const failures = [];
-for (let i = 0; i < rows.length; i += 8) {
-  failures.push(...(await Promise.all(rows.slice(i, i + 8).map(upload))).filter(Boolean));
-  process.stdout.write(`\r  ${Math.min(i + 8, rows.length)}/${rows.length}`);
+for (let i = 0; i < rows.length; i += jobs) {
+  failures.push(...(await Promise.all(rows.slice(i, i + jobs).map(upload))).filter(Boolean));
+  process.stdout.write(`\r  ${Math.min(i + jobs, rows.length)}/${rows.length}`);
+  if (target === "--linked") await sleep(700);
 }
 process.stdout.write("\n");
 if (failures.length) console.error(`${failures.length} file gagal diunggah:\n${failures.slice(0, 5).join("\n")}`);

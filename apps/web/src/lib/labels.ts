@@ -24,6 +24,14 @@ export const AKTA_TYPES = [
   "Fidusia",
   "Keterangan Waris",
   "Wasiat",
+  "Pendirian Yayasan",
+  "Pendirian Koperasi",
+  "Jual Beli Saham",
+  "Pembubaran",
+  "Pembagian Hak Bersama (APHB)",
+  "Tukar Menukar",
+  "Perjanjian Kawin",
+  "Sewa-menyewa",
   "Lainnya",
 ] as const;
 

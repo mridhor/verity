@@ -63,9 +63,27 @@ Why Redis was rejected:
   - Login: "Ingat saya". When it is off, the auth cookies last only until the browser closes.
 
 ## Synthetic demo data
-`supabase/demo/seed.mjs` writes data straight into Supabase through the real RPCs, with simulated
-member claims: numbering, registers, status history, notifications and the audit chain all come
-out as in real use. All names, NIK (prefix 99) and files are fictitious. It runs once per office.
+- **One SQL file:** `supabase/demo/seed_demo.sql` holds all demo data, runnable in the Supabase SQL
+  Editor. The e-mail constants at its top choose the Notaris, the main staff member and the team.
+- **Generated:** the file comes from `supabase/demo/seed.mjs`, where the cases are defined.
+- **Written like real use:** rows go through the real RPCs with simulated member claims, so
+  numbering, registers, status history, notifications and the audit chain come out as they would
+  in normal work.
+- **Idempotent per case:** an existing berkas title is skipped, so running it twice adds nothing.
+- **Fictitious:** all names, NIK (prefix 99) and files are made up.
+- **Files:** they cannot travel in SQL; `seed.mjs --files-only` uploads a generated sample for every
+  document that has no file yet.
+- **Cases:** 51. Besides the routine ones:
+  - a foreign-investment PT with a foreign director who has no NIK
+  - a yayasan and a tukar-menukar still at intake with no akta
+  - a koperasi with 9 founders
+  - RUPS, share sale, liquidation
+  - AJB waiting for a roya, with a PPJB already final
+  - APHB, hibah with BPHTB pending
+  - perjanjian kawin, waris with an heir abroad, lease
+  - a legalisation, which gets no akta number (it belongs in the legalisation book)
+  - a closed (cancelled) berkas
+  - three agent proposals still waiting for approval
 
 ## Still intentionally absent
 - A topbar page title: the title is in the page header.
