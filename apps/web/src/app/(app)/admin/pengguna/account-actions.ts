@@ -18,7 +18,7 @@ const schema = z.object({
 
 const MESSAGES: Record<string, string> = {
   email_exists: "Email ini sudah punya akun. Gunakan “Akun yang sudah ada”.",
-  forbidden: "Hanya Super Admin dengan verifikasi dua langkah yang dapat membuat akun.",
+  forbidden: "Hanya Super Admin yang dapat membuat akun (selesaikan verifikasi dua langkah bila sudah dipasang).",
   weak_password: "Kata sandi awal minimal 10 karakter.",
   invalid_input: "Periksa kembali email, nama, dan peran.",
   add_failed: "Akun dibuat tetapi gagal ditambahkan ke kantor, sehingga dibatalkan. Coba lagi.",

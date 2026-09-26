@@ -104,6 +104,7 @@ def test_notaris_tier_needs_notaris_with_mfa(world):
     (pid,) = propose(world.as_(world.andi), world.berkas_pt, [approve_signing(aid)])
     with forbidden:
         world.as_(world.andi).one("select public.decide_proposed_change(%s, 'approve')", (pid,))
+    world.enroll_mfa(world.sari)
     with forbidden:
         world.as_(world.sari, aal="aal1").one("select public.decide_proposed_change(%s, 'approve')", (pid,))
     with forbidden:

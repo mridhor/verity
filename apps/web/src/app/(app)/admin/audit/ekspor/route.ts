@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { AUDIT_MODULES, auditLabel } from "@/lib/audit-labels";
-import { getPrincipal } from "@/lib/auth";
+import { getPrincipal, needsMfa } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 const csv = (v: unknown) => {
@@ -13,7 +13,7 @@ const csv = (v: unknown) => {
 /** CSV export of audit metadata (no client content is ever stored in the log). RLS limits rows. */
 export async function GET(request: NextRequest) {
   const me = await getPrincipal();
-  if (!me || (me.role !== "notaris" && me.role !== "super_admin") || (me.aal !== "aal2")) {
+  if (!me || (me.role !== "notaris" && me.role !== "super_admin") || needsMfa(me)) {
     return new NextResponse("Tidak diizinkan.", { status: 403 });
   }
   const mod = AUDIT_MODULES.find((m) => m.id === request.nextUrl.searchParams.get("modul"));

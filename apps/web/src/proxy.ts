@@ -5,12 +5,11 @@ import { NextResponse, type NextRequest } from "next/server";
 // Reachable with or without a session: requesting a reset link, and the email-link callback
 // (which must run before any redirect, or the one-time code in the URL is lost).
 const ALWAYS_OPEN = ["/masuk/lupa-sandi", "/auth/konfirmasi"];
-const MFA_ROLES = new Set(["notaris", "partner", "super_admin"]);
 const PASSWORD_PAGE = "/masuk/sandi-baru";
 
 /**
  * Refreshes the Supabase session cookie and gates every page:
- * unauthenticated → /masuk; privileged role without aal2 → /masuk/mfa?next=<page>.
+ * unauthenticated → /masuk; enrolled 2FA not yet completed → /masuk/mfa?next=<page>.
  * Pages re-check with requirePrincipal(); RLS is the final authority.
  */
 export async function proxy(request: NextRequest) {
@@ -61,9 +60,11 @@ export async function proxy(request: NextRequest) {
     return r;
   }
 
-  const needsMfa = MFA_ROLES.has(String(claims.app_role ?? "")) && claims.aal !== "aal2";
+  // 2FA is optional (ADR 0005): only users with a verified factor must complete it (aal2).
+  const { data: level } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  const needsMfa = level?.nextLevel === "aal2" && claims.aal !== "aal2";
   if (needsMfa && path !== "/masuk/mfa") return redirectTo("/masuk/mfa", path === "/masuk" ? undefined : path);
-  // Accounts created with an initial password must set their own first (after 2FA for privileged roles).
+  // Accounts created with an initial password must set their own first (after 2FA, if they enrolled one).
   const mustChange = (claims.app_metadata as { must_change_password?: boolean } | undefined)?.must_change_password === true;
   if (!needsMfa && mustChange && path !== PASSWORD_PAGE) {
     const r = redirectTo(PASSWORD_PAGE);

@@ -1,6 +1,7 @@
 // Creates a login account with an initial password and adds it to the caller's office.
 // Runs on Supabase, where the secret key lives; the web app never holds it (PLAN.md §6).
-// Only an active Super Admin of the office, signed in with 2FA (aal2), may call it. The new
+// Only an active Super Admin of the office may call it, having completed 2FA if they enrolled it
+// (2FA is optional since ADR 0005). The new
 // user must change the password at first sign-in (app_metadata.must_change_password).
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -29,8 +30,14 @@ Deno.serve(async (req) => {
   });
   const { data: claimsData } = await caller.auth.getClaims(token);
   const claims = claimsData?.claims as Record<string, unknown> | undefined;
-  if (!claims || claims.app_role !== "super_admin" || claims.aal !== "aal2" || !claims.tenant_id) {
+  if (!claims || claims.app_role !== "super_admin" || !claims.tenant_id) {
     return json(403, { error: "forbidden" });
+  }
+  const admin = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  if (claims.aal !== "aal2") {
+    // Optional 2FA: aal1 is enough only for a caller without a verified factor.
+    const { data: factors, error: factorError } = await admin.auth.admin.mfa.listFactors({ userId: String(claims.sub) });
+    if (factorError || (factors?.factors ?? []).some((f) => f.status === "verified")) return json(403, { error: "forbidden" });
   }
   // Live membership check (a revoked role stops working before the token expires).
   const { error: liveError } = await caller.rpc("list_tenant_members");
@@ -47,7 +54,6 @@ Deno.serve(async (req) => {
   }
   if (password.length < 10 || password.length > 72) return json(400, { error: "weak_password" });
 
-  const admin = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
   const { data: created, error: createError } = await admin.auth.admin.createUser({
     email, password, email_confirm: true, app_metadata: { must_change_password: true },
   });

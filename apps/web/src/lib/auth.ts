@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 import { principalSchema } from "@verity/schema-ts";
 import { createClient } from "@/lib/supabase/server";
-import { MFA_REQUIRED, type AppRole } from "@/lib/roles";
+import type { AppRole } from "@/lib/roles";
 
 export type Principal = {
   userId: string;
@@ -11,6 +11,8 @@ export type Principal = {
   aal: string;
   tenantId?: string;
   role?: AppRole;
+  /** Has a verified second factor: then every session must complete it (aal2). */
+  mfaEnrolled: boolean;
 };
 
 /**
@@ -31,7 +33,10 @@ export const getPrincipal = cache(async (): Promise<Principal | null> => {
   });
   if (!parsed.success) return null;
   const p = parsed.data;
+  // 2FA is optional (ADR 0005); nextLevel is aal2 exactly when the user has a verified factor.
+  const { data: level } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   return {
+    mfaEnrolled: level?.nextLevel === "aal2",
     userId: p.user_id,
     email: typeof c.email === "string" ? c.email : undefined,
     aal: p.aal,
@@ -42,17 +47,18 @@ export const getPrincipal = cache(async (): Promise<Principal | null> => {
 
 export type ActivePrincipal = Principal & { tenantId: string; role: AppRole };
 
-/** For pages inside the app shell: signed in, member of a tenant, MFA done when required. */
+/** For pages inside the app shell: signed in, member of a tenant, 2FA completed if enrolled. */
 export async function requirePrincipal(): Promise<ActivePrincipal> {
   const p = await getPrincipal();
   if (!p) redirect("/masuk");
   if (!p.tenantId || !p.role) redirect("/tanpa-akses");
-  if (MFA_REQUIRED.has(p.role) && p.aal !== "aal2") redirect("/masuk/mfa");
+  if (needsMfa(p)) redirect("/masuk/mfa");
   return p as ActivePrincipal;
 }
 
+/** 2FA is optional, but a user who enrolled a factor must complete it in every session. */
 export function needsMfa(p: Principal) {
-  return !!p.role && MFA_REQUIRED.has(p.role) && p.aal !== "aal2";
+  return p.mfaEnrolled && p.aal !== "aal2";
 }
 
 /** Registers and protokol exist only for a notary office, not for a law firm. */

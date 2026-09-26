@@ -100,7 +100,7 @@ function NewAccountForm() {
           <Button type="button" onClick={() => setPassword(generatePassword())}><KeyRound size={14} /> Buat acak</Button>
         </div>
         <p className="mt-1.5 text-[12px] text-subtle">
-          Minimal 10 karakter. Pengguna wajib menggantinya saat pertama masuk; peran Notaris, Partner dan Super Admin juga wajib memasang 2FA.
+          Minimal 10 karakter. Pengguna wajib menggantinya saat pertama masuk. Verifikasi dua langkah bisa dipasang sendiri dari halaman Keamanan (disarankan untuk Notaris).
         </p>
       </div>
       <div className="col-span-full">

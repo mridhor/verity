@@ -3,8 +3,7 @@ import { CheckCircle2, CircleAlert } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { Section } from "@/components/ui/blocks";
 import { Button } from "@/components/ui/button";
-import { requirePrincipal } from "@/lib/auth";
-import { MFA_REQUIRED } from "@/lib/roles";
+import { needsMfa, requirePrincipal } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime } from "@/lib/utils";
 import { ConfirmAction } from "@/components/ui/dialog";
@@ -29,7 +28,7 @@ export default async function KeamananPage({ searchParams }: { searchParams: Pro
   const me = await requirePrincipal();
   const { sesi, jumlah } = await searchParams;
   const supabase = await createClient();
-  const officeAdmin = (me.role === "notaris" || me.role === "super_admin") && me.aal === "aal2";
+  const officeAdmin = (me.role === "notaris" || me.role === "super_admin") && !needsMfa(me);
   const [{ data: factors }, chain, { data: settings }, stats] = await Promise.all([
     supabase.auth.mfa.listFactors(),
     me.role === "notaris" || me.role === "super_admin" ? supabase.rpc("audit_chain_status") : Promise.resolve(null),
@@ -39,7 +38,6 @@ export default async function KeamananPage({ searchParams }: { searchParams: Pro
   const timeout = settings?.session_timeout_hours ?? 8;
   const sessionStats = (stats?.data as { sessions: number; users: number }[] | null | undefined)?.[0];
   const totp = factors?.totp ?? [];
-  const mfaRequired = MFA_REQUIRED.has(me.role);
 
   return (
     <>
@@ -50,14 +48,11 @@ export default async function KeamananPage({ searchParams }: { searchParams: Pro
             <Row ok={totp.length > 0} title="Verifikasi dua langkah (TOTP)">
               {totp.length > 0
                 ? `Aktif sejak ${formatDateTime(totp[0]!.created_at)}. Sesi ini ${me.aal === "aal2" ? "sudah" : "belum"} diverifikasi dua langkah.`
-                : mfaRequired
-                  ? "Wajib untuk peran Anda."
-                  : "Tidak wajib untuk peran Anda, tetapi sangat disarankan."}
+                : "Tidak wajib, tetapi sangat disarankan, terutama untuk Notaris, Partner, dan Super Admin. Setelah dipasang, kode dari aplikasi autentikator diminta setiap kali masuk."}
               {totp.length === 0 && (
                 <div className="mt-2"><Link href="/masuk/mfa?next=/keamanan" className="font-medium text-foreground underline-offset-2 hover:underline">Aktifkan sekarang</Link></div>
               )}
-              {totp.length > 0 && mfaRequired && <div className="mt-1 text-[11.5px] text-subtle">Tidak dapat dinonaktifkan untuk Notaris, Partner, dan Super Admin.</div>}
-              {totp.length > 0 && !mfaRequired && <DisableMfaButton factorId={totp[0]!.id} />}
+              {totp.length > 0 && <DisableMfaButton factorId={totp[0]!.id} />}
             </Row>
             <Row ok title="Kata sandi">
               Dikelola oleh Supabase Auth; aplikasi tidak pernah menyimpan kata sandi. Minimal 10 karakter.

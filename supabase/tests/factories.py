@@ -81,6 +81,10 @@ class World:
             )
         return aid
 
+    def enroll_mfa(self, user: uuid.UUID) -> None:
+        """A verified TOTP factor: from now on this user's sessions must be aal2."""
+        self.conn.execute("insert into auth.mfa_factors (user_id, status) values (%s, 'verified')", (user,))
+
     def ready_for_signing(self, akta: uuid.UUID) -> None:
         sari = self.as_(self.sari)
         sari.run("select public.transition_akta_status(%s, 'verifikasi')", (akta,))

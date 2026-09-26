@@ -18,6 +18,7 @@ def test_settings_only_office_admin_with_mfa(world):
     world.as_(world.bambang).run("select public.update_tenant_settings(null, 12)")
     with forbidden:
         world.as_(world.andi).run("select public.update_tenant_settings(10, 8)")
+    world.enroll_mfa(world.sari)
     with forbidden:
         world.as_(world.sari, aal="aal1").run("select public.update_tenant_settings(10, 8)")
 
@@ -99,6 +100,7 @@ def test_session_stats_and_revoke(world, conn):
 def test_session_control_needs_office_admin_with_mfa(world):
     with forbidden:
         world.as_(world.andi).one("select public.revoke_office_sessions()")
+    world.enroll_mfa(world.sari)
     with forbidden:
         world.as_(world.sari, aal="aal1").one("select public.revoke_office_sessions()")
     with forbidden:

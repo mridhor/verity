@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 
 type Enrolment = { factorId: string; qr: string; secret: string };
 
-/** TOTP enrolment (first time) or verification, raising the session to aal2 (REQ-GW-05). */
+/** TOTP enrolment (first time) or verification, raising the session to aal2 (optional since ADR 0005; required once enrolled). */
 export function MfaForm({ next }: { next: string }) {
   const router = useRouter();
   const [factorId, setFactorId] = useState<string | null>(null);

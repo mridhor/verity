@@ -40,11 +40,17 @@ def test_no_claims_sees_nothing(world):
     assert titles(anon_like) == set()
 
 
-def test_privileged_roles_need_mfa(world):
+def test_enrolled_2fa_gates_everything_until_verified(world):
+    # 2FA is optional (ADR 0005), but once enrolled the session must be aal2, for any role.
+    assert titles(world.as_(world.sari, aal="aal1")) != set()
+    world.enroll_mfa(world.sari)
+    world.enroll_mfa(world.andi)
     assert titles(world.as_(world.sari, aal="aal1")) == set()
     assert world.as_(world.sari, aal="aal1").all("select * from public.tenant_members") == []
-    # Staff are not forced to aal2 by policy (PRD); MFA for them is a login-policy decision.
-    assert titles(world.as_(world.andi, aal="aal1")) == {"Pendirian PT Sinar Kopi Nusantara"}
+    assert titles(world.as_(world.andi, aal="aal1")) == set()
+    assert titles(world.as_(world.andi, aal="aal2")) == {"Pendirian PT Sinar Kopi Nusantara"}
+    # Retno has no factor: aal1 is fine.
+    assert titles(world.as_(world.retno, aal="aal1")) == {"AJB Kavling 14 Cilandak"}
 
 
 def test_super_admin_sees_berkas_metadata_but_is_not_content_member(world):

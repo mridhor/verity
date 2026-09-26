@@ -55,6 +55,7 @@ def test_staff_may_submit_but_only_notaris_moves_to_signing(world):
     andi.run("select public.transition_akta_status(%s, 'verifikasi')", (aid,))
     with forbidden:
         andi.run("select public.transition_akta_status(%s, 'menunggu_ttd')", (aid,))
+    world.enroll_mfa(world.sari)  # enrolled: aal1 is not enough
     with forbidden:
         world.as_(world.sari, aal="aal1").run("select public.transition_akta_status(%s, 'menunggu_ttd')", (aid,))
     world.as_(world.sari).run("select public.transition_akta_status(%s, 'menunggu_ttd')", (aid,))
@@ -115,6 +116,7 @@ def test_ppat_has_its_own_sequence(world):
 
 @pytest.mark.parametrize("who,aal", [("andi", "aal2"), ("sari", "aal1")])
 def test_finalize_needs_official_with_mfa(world, who, aal):
+    world.enroll_mfa(world.sari)
     aid = world.akta(world.berkas_pt, parties=[world.person("Ahmad Fauzi")])
     world.ready_for_signing(aid)
     with forbidden:
@@ -232,3 +234,12 @@ def test_checklist_follows_berkas_and_stamps_completion(world):
     row = andi.all("select done_by, done_at is not null as stamped from public.checklist_items where id = %s", (cid,))[0]
     assert row == {"done_by": world.andi, "stamped": True}
     assert world.as_(world.retno).all("select id from public.checklist_items") == []
+
+
+def test_notaris_without_2fa_may_finalize_at_aal1(world):
+    """2FA is optional: a Notaris who never enrolled a factor acts at aal1."""
+    aid = world.akta(world.berkas_pt, parties=[world.person("Ahmad Fauzi")])
+    sari = world.as_(world.sari, aal="aal1")
+    sari.run("select public.transition_akta_status(%s, 'verifikasi')", (aid,))
+    sari.run("select public.transition_akta_status(%s, 'menunggu_ttd')", (aid,))
+    assert sari.one("select akta_number from public.finalize_akta(%s, %s)", (aid, TODAY)) == 1

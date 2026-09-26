@@ -10,7 +10,7 @@ export const ROLE_LABEL: Record<AppRole, string> = {
 };
 
 /** Roles that must use two-factor authentication (REQ-GW-05). Mirrors private.aal_ok(). */
-export const MFA_REQUIRED: ReadonlySet<AppRole> = new Set(["notaris", "partner", "super_admin"]);
+// 2FA is optional for every role (ADR 0005); users who enrolled a factor must always complete it.
 
 /** Roles that may change berkas membership (mirrors public.set_berkas_member). */
 export const MEMBERSHIP_MANAGERS: ReadonlySet<AppRole> = new Set(["notaris", "partner", "super_admin"]);
