@@ -9,6 +9,8 @@ import { likeTerm, parseAktaNumber } from "@/lib/search/akta";
 import { createClient } from "@/lib/supabase/server";
 import { AgentPageContext } from "@/components/agent/agent-provider";
 
+export const metadata = { title: "Minuta & dokumen" };
+
 const FORMATS = ["PDF", "JPG", "PNG", "DOCX"];
 
 export default async function DokumenPage({ searchParams }: { searchParams: Promise<{ jenis?: string; format?: string; q?: string }> }) {

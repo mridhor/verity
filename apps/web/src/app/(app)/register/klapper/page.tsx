@@ -9,6 +9,8 @@ import { createClient } from "@/lib/supabase/server";
 import { cn, formatDate } from "@/lib/utils";
 import { AgentPageContext } from "@/components/agent/agent-provider";
 
+export const metadata = { title: "Buku klapper" };
+
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
 type Entry = {

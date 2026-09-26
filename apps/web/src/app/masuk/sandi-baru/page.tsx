@@ -3,6 +3,8 @@ import { getPrincipal } from "@/lib/auth";
 import { AuthCard } from "../auth-card";
 import { NewPasswordForm } from "./new-password-form";
 
+export const metadata = { title: "Kata sandi baru" };
+
 /**
  * Set a new password. Reached from a reset/invite email link (via /auth/konfirmasi), or by a
  * signed-in user changing a temporary password. Privileged roles pass MFA first (proxy.ts).

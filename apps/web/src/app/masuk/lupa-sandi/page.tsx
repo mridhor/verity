@@ -1,6 +1,8 @@
 import { AuthCard } from "../auth-card";
 import { ResetRequestForm } from "./reset-request-form";
 
+export const metadata = { title: "Lupa kata sandi" };
+
 const LINK_ERRORS: Record<string, string> = {
   tautan: "Tautan atur ulang tidak berlaku lagi atau sudah dipakai. Minta tautan baru di bawah.",
 };

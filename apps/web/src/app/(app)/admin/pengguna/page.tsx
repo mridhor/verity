@@ -10,6 +10,8 @@ import { formatDateTime } from "@/lib/utils";
 import { OfficialForm } from "./official-form";
 import { AddUserDialog, EditMemberDialog } from "./user-dialogs";
 
+export const metadata = { title: "Pengguna" };
+
 type Member = {
   user_id: string; display_name: string; role: AppRole; active: boolean; email: string;
   last_sign_in_at: string | null; created_at: string;

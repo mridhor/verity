@@ -13,6 +13,8 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
 import { AgentPageContext } from "@/components/agent/agent-provider";
 
+export const metadata = { title: "Akta" };
+
 type Party = { role: PartyRole; sort_order: number; persons: { full_name: string } | null; companies: { name: string; legal_form: string } | null };
 
 export default async function AktaListPage({ searchParams }: { searchParams: Promise<{ status?: string; q?: string }> }) {

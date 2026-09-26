@@ -5,6 +5,8 @@ import { APPOINTMENT_LABEL } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/server";
 import { NewAktaForm } from "./new-akta-form";
 
+export const metadata = { title: "Akta baru" };
+
 export default async function NewAktaPage({ searchParams }: { searchParams: Promise<{ berkas?: string }> }) {
   const me = await requirePrincipal();
   if (me.role === "super_admin") notFound();

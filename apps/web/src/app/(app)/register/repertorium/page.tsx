@@ -11,6 +11,8 @@ import { formatDate, formatDateTime } from "@/lib/utils";
 import { CorrectionForm } from "./correction-form";
 import { AgentPageContext } from "@/components/agent/agent-provider";
 
+export const metadata = { title: "Repertorium" };
+
 export default async function RepertoriumPage({ searchParams }: { searchParams: Promise<{ pejabat?: string; tahun?: string }> }) {
   const me = await requirePrincipal();
   if (me.role === "super_admin") notFound();

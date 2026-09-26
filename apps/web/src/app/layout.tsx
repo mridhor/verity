@@ -7,7 +7,7 @@ const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 const newsreader = Newsreader({ subsets: ["latin"], variable: "--font-newsreader", style: ["normal", "italic"] });
 
 export const metadata: Metadata = {
-  title: "Verity",
+  title: { default: "Verity", template: "%s · Verity" },
   description: "Ruang kerja berkas kantor Notaris/PPAT",
   robots: { index: false, follow: false },
 };

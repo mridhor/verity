@@ -11,6 +11,8 @@ import { ConfirmAction } from "@/components/ui/dialog";
 import { revokeOfficeSessions, signOutOtherSessions } from "./actions";
 import { DisableMfaButton, OfficeSettingsDialog } from "./office-controls";
 
+export const metadata = { title: "Keamanan" };
+
 function Row({ ok, title, children }: { ok: boolean; title: string; children: React.ReactNode }) {
   return (
     <li className="flex gap-3 border-t border-border-soft py-3.5 first:border-0">

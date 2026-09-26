@@ -8,6 +8,8 @@ import { requirePrincipal } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime } from "@/lib/utils";
 
+export const metadata = { title: "Audit log" };
+
 const ACTOR = { human: "Manusia", agent: "Agen", worker: "Worker", system: "Sistem" } as const;
 
 export default async function AuditPage({ searchParams }: { searchParams: Promise<{ modul?: string; q?: string }> }) {

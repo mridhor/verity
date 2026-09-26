@@ -11,6 +11,8 @@ import { formatDate } from "@/lib/utils";
 import { markReceived } from "./actions";
 import { TransferForm } from "./transfer-form";
 
+export const metadata = { title: "Protokol notaris" };
+
 export default async function ProtokolPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const me = await requirePrincipal();
   if (me.role === "super_admin") notFound();

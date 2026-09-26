@@ -16,6 +16,7 @@ import { cn, formatDate, formatDateTime } from "@/lib/utils";
 import { deleteDraft, removeParty } from "../actions";
 import { AddPartyForms, EditAktaForm, FinalizeForm, TransitionButton } from "./akta-forms";
 import { AgentPageContext } from "@/components/agent/agent-provider";
+import { PageCrumbs } from "@/components/shell/breadcrumbs";
 
 type PartyRow = {
   id: string; role: PartyRole; capacity: string | null; sort_order: number;
@@ -24,6 +25,13 @@ type PartyRow = {
 };
 
 const NOTARIS_ONLY = "Hanya Notaris yang dapat melakukan ini.";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const { data } = await (await createClient()).from("akta").select("title, number, number_period").eq("id", id).maybeSingle();
+  const number = data ? formatAktaNumber(data.number, data.number_period) : null;
+  return { title: data ? (number ? `Akta ${number}` : data.title) : "Akta" };
+}
 
 export default async function AktaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const me = await requirePrincipal();
@@ -61,6 +69,11 @@ export default async function AktaDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <>
+      <PageCrumbs items={[
+        { label: "Kerja" }, { label: "Akta", href: "/akta" },
+        { label: berkas.title, href: `/berkas/${berkas.id}?tab=akta` },
+        { label: number ? `Akta ${number}` : akta.title },
+      ]} />
       <AgentPageContext
         context={{ kind: "akta", label: `Akta ${number ?? akta.title}`, berkasId: berkas.id, aktaId: akta.id }}
         suggestions={["apa yang kurang sebelum difinalkan?", "siapa penghadapnya", "dokumen akta ini", "ajukan verifikasi"]}

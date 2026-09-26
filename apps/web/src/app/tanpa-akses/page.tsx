@@ -1,5 +1,7 @@
 import { AuthCard } from "../masuk/auth-card";
 
+export const metadata = { title: "Tanpa akses" };
+
 export default function TanpaAksesPage() {
   return (
     <AuthCard title="Akun belum terhubung ke kantor">

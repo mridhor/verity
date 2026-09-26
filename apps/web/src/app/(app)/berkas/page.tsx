@@ -11,6 +11,8 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
 import { NewBerkasForm } from "./new-berkas-form";
 
+export const metadata = { title: "Berkas" };
+
 const STATUS = [
   { value: "aktif", label: "Aktif" },
   { value: "selesai", label: "Selesai" },

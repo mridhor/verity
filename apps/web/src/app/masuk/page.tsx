@@ -1,6 +1,8 @@
 import { AuthCard } from "./auth-card";
 import { LoginForm } from "./login-form";
 
+export const metadata = { title: "Masuk" };
+
 export default async function MasukPage({ searchParams }: { searchParams: Promise<{ sesi?: string }> }) {
   const expired = (await searchParams).sesi === "habis";
   return (

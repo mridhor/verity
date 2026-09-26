@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Download, ExternalLink, FileText, Star } from "lucide-react";
 import { AgentPageContext } from "@/components/agent/agent-provider";
+import { PageCrumbs } from "@/components/shell/breadcrumbs";
 import { PageHeader } from "@/components/shell/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Section } from "@/components/ui/blocks";
@@ -13,6 +14,12 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
 import { toggleBookmark, verifyReference } from "../actions";
 import { AttachLegalFile } from "./attach-form";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const { data } = await (await createClient()).from("legal_references").select("number_label").eq("id", id).maybeSingle();
+  return { title: data?.number_label ?? "Dasar hukum" };
+}
 
 export default async function DasarHukumDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const me = await requirePrincipal();
@@ -31,6 +38,7 @@ export default async function DasarHukumDetailPage({ params }: { params: Promise
 
   return (
     <>
+      <PageCrumbs items={[{ label: "Referensi" }, { label: "Dasar hukum", href: "/dasar-hukum" }, { label: r.number_label }]} />
       <AgentPageContext context={{ kind: "kantor", label: `Dasar hukum: ${r.number_label}`, page: "dasar_hukum" }}
         suggestions={[`dasar hukum ${r.number_label}`, "dasar hukum jabatan notaris"]} />
       <PageHeader

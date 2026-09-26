@@ -12,6 +12,8 @@ import { deleteSchedule } from "./actions";
 import { ScheduleForm } from "./schedule-form";
 import { AgentPageContext } from "@/components/agent/agent-provider";
 
+export const metadata = { title: "Jadwal" };
+
 const TONE: Record<ScheduleKind, BadgeTone> = { pertemuan_klien: "info", penandatanganan: "warning", internal: "neutral" };
 
 export default async function JadwalPage({ searchParams }: { searchParams: Promise<{ jenis?: string; lalu?: string }> }) {

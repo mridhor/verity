@@ -12,6 +12,8 @@ import { toggleBookmark, verifyReference } from "./actions";
 import { ReferenceForm } from "./reference-form";
 import { AgentPageContext } from "@/components/agent/agent-provider";
 
+export const metadata = { title: "Dasar hukum" };
+
 type Ref = {
   id: string; category: LegalCategory; number_label: string; title: string; year: number | null;
   status: "berlaku" | "diubah" | "dicabut"; source_url: string | null; verified_by: string | null; verified_at: string | null;

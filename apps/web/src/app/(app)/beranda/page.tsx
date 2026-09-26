@@ -10,6 +10,8 @@ import { AKTA_STATUSES, AKTA_STATUS_LABEL, SCHEDULE_KIND_LABEL, formatAktaNumber
 import { createClient } from "@/lib/supabase/server";
 import { cn, formatDateTime } from "@/lib/utils";
 
+export const metadata = { title: "Beranda" };
+
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 const STATUS_BAR: Record<AktaStatus, string> = {
   draft: "bg-[#cfccc3]", verifikasi: "bg-info", menunggu_ttd: "bg-warning", selesai: "bg-success", diarsipkan: "bg-muted-foreground",

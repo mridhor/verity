@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CalendarDays, Check, Clock, FileText, UserRound } from "lucide-react";
 import { AgentPageContext } from "@/components/agent/agent-provider";
+import { PageCrumbs } from "@/components/shell/breadcrumbs";
 import { BerkasWorkspace } from "@/components/agent/berkas-workspace";
 import { DocumentTable, type DocumentRow } from "@/components/documents/document-table";
 import { UploadForm } from "@/components/documents/upload-form";
@@ -33,6 +34,16 @@ const TABS = [
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
+
+// Tab title: record title and tab (RLS applies; an invisible berkas gets the generic title).
+export async function generateMetadata({ params, searchParams }: {
+  params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }>;
+}) {
+  const [{ id }, { tab }] = await Promise.all([params, searchParams]);
+  const { data } = await (await createClient()).from("berkas").select("title").eq("id", id).maybeSingle();
+  const tabLabel = TABS.find((t) => t.id === tab)?.label ?? "Percakapan";
+  return { title: data ? `${data.title} · ${tabLabel}` : "Berkas" };
+}
 
 export default async function BerkasPage({
   params,
@@ -143,6 +154,11 @@ export default async function BerkasPage({
         </div>
       </header>
 
+      <PageCrumbs items={[
+        { label: "Kerja" }, { label: "Berkas", href: "/berkas" },
+        { label: berkas.title, href: `/berkas/${berkas.id}` },
+        { label: TABS.find((t) => t.id === tab)!.label },
+      ]} />
       <AgentPageContext
         context={{ kind: "berkas", label: `Berkas: ${berkas.title}`, berkasId: berkas.id }}
         suggestions={["cek kelengkapan dokumen pendiri", "ringkasan berkas", "siapa saja pihaknya", "apa yang kurang sebelum difinalkan?"]}
